@@ -17,7 +17,7 @@ test: main $(INPUT)
 	./main $(INPUT)
 
 clean:
-	$(RM) main obj/*
+	$(RM) main main.o obj/*
 
 main: main.o $(LIBS)
 	$(CC) -fPIC $(DEBUG) -o $@ $< $(LINK)
