@@ -36,8 +36,8 @@ void report_state(Parser_State *parser, FILE *stream) {
 
 
 
-static double pow_(double base, int expt) {
-    double result = 1;
+static f64 pow_(f64 base, i32 expt) {
+    f64 result = 1;
 
     if (expt < 0) {
         base = 1/base;
@@ -53,8 +53,8 @@ static double pow_(double base, int expt) {
 }
 
 
-int parse_sign(Parser_State *parser) {
-    int result;
+i32 parse_sign(Parser_State *parser) {
+    i32 result;
     switch(peek(parser)) {
         case '+': next(parser); result =  1; break;
         case '-': next(parser); result = -1; break;
@@ -65,8 +65,8 @@ int parse_sign(Parser_State *parser) {
 }
 
 #define NaN (0.0/0.0);
-double parse_double(Parser_State *parser) {
-    double sign = (double)parse_sign(parser);
+f64 parse_f64(Parser_State *parser) {
+    f64 sign = (f64)parse_sign(parser);
     switch (parser->error) {
         case Trailing_Chars: break;
         case None:
@@ -75,14 +75,14 @@ double parse_double(Parser_State *parser) {
         default: return NaN;
     }
 
-    double integral = (double)parse_u64(parser);
+    f64 integral = (f64)parse_u64(parser);
     switch (parser->error) {
         case Trailing_Chars: break;
         case None: return sign * integral;
         default: return NaN;
     }
 
-    double decimal = 0.0;
+    f64 decimal = 0.0;
     if (peek(parser) == '.') {
         next(parser);
         decimal = parse_decimal(parser);
@@ -93,7 +93,7 @@ double parse_double(Parser_State *parser) {
         }
     }
 
-    int expt = 0;
+    i32 expt = 0;
     if (peek(parser) == 'e') {
         next(parser);
         expt = parse_sign(parser);
@@ -102,8 +102,8 @@ double parse_double(Parser_State *parser) {
             case None: parser->error = Truncated_Literal;
             default: return NaN;
         }
-        const unsigned long state_before_expt = parsed_bytes(parser);
-        expt *= (int)parse_u64(parser);
+        const u64 state_before_expt = parsed_bytes(parser);
+        expt *= (i32)parse_u64(parser);
         switch(parser->error) {
             case Trailing_Chars: break;
             case None:           break;
@@ -115,15 +115,15 @@ double parse_double(Parser_State *parser) {
         }
     }
 
-    bool is_double_precision = true;
+    bool is_f64_precision = true;
     switch(peek(parser)) {
         case 'f':
             next(parser);
-            is_double_precision = false;
+            is_f64_precision = false;
             break;
         case 'd':
             next(parser);
-            is_double_precision = true;
+            is_f64_precision = true;
             break;
         default:;
     }
@@ -134,16 +134,16 @@ double parse_double(Parser_State *parser) {
         parser->error = Trailing_Chars;
     }
 
-    double result = sign * (integral + decimal) * pow_(10.0, expt);
-    result = is_double_precision ? result : (double)(float)result;
+    f64 result = sign * (integral + decimal) * pow_(10.0, expt);
+    result = is_f64_precision ? result : (f64)(f32)result;
 
     return result;
 }
 
 /// given the string "1'234" returns 1234UL.
 /// the empty string "" returns 0UL.
-unsigned long parse_u64(Parser_State *parser) {
-    unsigned long result = 0;
+u64 parse_u64(Parser_State *parser) {
+    u64 result = 0;
     for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
         if ('0' <= c && c <= '9') {
             result = 10UL * result + (c - '0');
@@ -161,11 +161,11 @@ unsigned long parse_u64(Parser_State *parser) {
 
 /// given the string "123'4", returns 0.1234d.
 /// the empty string ""       returns 0.0d.
-double parse_decimal(Parser_State *parser) {
-    double result = 0.0;
-    double unit   = 1.0;
+f64 parse_decimal(Parser_State *parser) {
+    f64 result = 0.0;
+    f64 unit   = 1.0;
 
-    for (char c; (c = peek(parser)) != '\0'; next(parser)) {
+    for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
         if ('0' <= c && c <= '9') {
             result += (unit /= 10UL) * (c - '0');
         } else if ( c == '\'' || c == '_') {

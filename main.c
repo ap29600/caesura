@@ -1,3 +1,4 @@
+#include "lib/builtin.h"
 #include "lib/error.h"
 #include "lib/string.h"
 #include "lib/parsing.h"
@@ -19,7 +20,7 @@ typedef struct {
     Token_Type type;
     union {
         String text;
-        double value;
+        f64 value;
     };
     Location loc;
     bool is_valid;
@@ -57,7 +58,7 @@ static Token_Type classify(Parser_State *parser) {
     #define COL_BLU_F ""
 #endif
 
-int fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
+i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     info = (Fmt_Info){0};
     Token tok = va_arg(va, Token);
     unsigned char *const begin = dest.begin;
@@ -72,7 +73,7 @@ int fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     switch (tok.type) {
         case Float:
             dest.begin += fmt_cstr(dest, "f64: " COL_GRN_F, info);
-            dest.begin += fmt_i64(dest, (long)tok.value, info);
+            dest.begin += fmt_i64(dest, (i64)tok.value, info);
             dest.begin += fmt_cstr(dest, RESET " ", info);
             break;
         case Operator:
@@ -90,7 +91,7 @@ int fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
 }
 
 String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
-    unsigned long begin = parsed_bytes(parser);
+    u64 begin = parsed_bytes(parser);
 
     for(rune c; (c = peek(parser)) != '\0'; next(parser)) {
         if (get_bit(whitespace, c)) {
@@ -114,15 +115,15 @@ String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials
 }
 
 Token next_token(Parser_State *parser) {
-    static unsigned long whitespace_data[256 / BITS];
+    static u64 whitespace_data[256 / BITS];
     static Bit_Set whitespace;
     if (whitespace.data == NULL)
-        whitespace = bit_set_from_cstring(whitespace_data, "\n\t ");
+        whitespace = bit_set_from_runes(whitespace_data, U"\n\t ");
 
-    static unsigned long specials_data[256 / BITS];
+    static u64 specials_data[256 / BITS];
     static Bit_Set specials;
     if (specials.data == NULL)
-        specials = bit_set_from_cstring(specials_data, ",.()");
+        specials = bit_set_from_runes(specials_data, U",.()");
 
     while(get_bit(whitespace, peek(parser))) next(parser);
 
@@ -132,7 +133,7 @@ Token next_token(Parser_State *parser) {
             return (Token){ .type = Empty, .loc = loc, .is_valid = false };
         } break;
         case Float: {
-            double value = parse_double(parser);
+            f64 value = parse_f64(parser);
             switch(parser->error) {
                 case None: // fallthrough
                 case Trailing_Chars: {
@@ -180,7 +181,7 @@ Parser_State parser_from_filename(const char *filename) {
     return result;
 }
 
-int main(int argc, char **argv) {
+i32 main(i32 argc, char **argv) {
     register_format_directive((Fmt_Directive){"Token", fmt_token_va});
 
     Parser_State parser = parser_from_filename(argv[1]);
