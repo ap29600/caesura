@@ -61,7 +61,7 @@ static Token_Type classify(Parser_State *parser) {
 i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     info = (Fmt_Info){0};
     Token tok = va_arg(va, Token);
-    unsigned char *const begin = dest.begin;
+    char *const begin = dest.begin;
 
     dest.begin += fmt_location(dest, tok.loc, info);
     dest.begin += fmt_cstr(dest, ": ", info);
@@ -116,6 +116,15 @@ String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials
     return slice(parser->source, begin, parsed_bytes(parser));
 }
 
+void ensure_total_parse(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
+    if (parser->error == None) {
+        rune r = peek(parser);
+        if (!get_bit(whitespace, r) && !get_bit(specials, r)) {
+            parser->error = Invalid_Parse;
+        }
+    }
+}
+
 Token next_token(Parser_State *parser) {
     static u64 whitespace_data[256 / BITS];
     static Bit_Set whitespace;
@@ -136,6 +145,7 @@ Token next_token(Parser_State *parser) {
         } break;
         case Float: {
             f64 value = parse_f64(parser);
+            ensure_total_parse(parser, whitespace, specials);
             if (parser->error == None) {
                 return (Token){Float, .value = value, .loc = loc, .is_valid = true};
             } else {

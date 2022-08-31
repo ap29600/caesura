@@ -4,31 +4,59 @@
 #include "format.h"
 #include "error.h"
 
-u8 default_format_buffer_data[4096];
+char default_format_buffer_data[4096];
 Byte_Slice default_format_buffer = {
     default_format_buffer_data,
     default_format_buffer_data + sizeof(default_format_buffer_data)
 };
 
-u64 directives_count = 9;
-Fmt_Directive directives[256] = {
-    {"i64",   fmt_i64_va },
-    {"u64",   fmt_u64_va },
-    {"i32",   fmt_i32_va },
-    {"u32",   fmt_u32_va },
-    {"str",   fmt_str_va },
-    {"cstr",  fmt_cstr_va},
-    {"rune",  fmt_rune_va},
-    {"error", fmt_error_va},
-    {"loc",   fmt_location_va},
+#define MAX_DIRECTIVES 256
+static Fmt_Directive directives[MAX_DIRECTIVES] = {
+    { "i64",   fmt_i64_va      },
+    { "u64",   fmt_u64_va      },
+    { "i32",   fmt_i32_va      },
+    { "u32",   fmt_u32_va      },
+    { "str",   fmt_str_va      },
+    { "cstr",  fmt_cstr_va     },
+    { "rune",  fmt_rune_va     },
+    { "error", fmt_error_va    },
+    { "loc",   fmt_location_va },
 };
+static u64 directives_count = 0;
+
+static i32 directive_cmp(const void *a, const void*b) {
+    return strncmp(a, b, FORMAT_DIRECTIVE_CHARS);
+}
+
+static void init_directives(){
+    // count the nonempty directives.
+    for(i64 i = 0; i < MAX_DIRECTIVES; i++) {
+        if (directives[i].directive[0] == '\0') {
+            directives_count = i;
+            break;
+        }
+    }
+
+    qsort(directives, directives_count, sizeof(Fmt_Directive), directive_cmp);
+}
 
 bool register_format_directive(Fmt_Directive directive) {
-    if (directives_count >= sizeof(directives) / sizeof(directives[0])) {
-        return false;
+    if (directives_count == 0) { init_directives(); }
+    if (directives_count >= MAX_DIRECTIVES) { return false; }
+
+    u64 pos = directives_count++;
+    while (pos != 0 && directive_cmp(&directive, &directives[pos - 1]) < 0) {
+        directives[pos] = directives[pos - 1];
+        --pos;
     }
-    directives[directives_count++] = directive;
+    directives[pos] = directive;
     return true;
+}
+
+fmt_procedure_t lookup_format_directive(const char name[FORMAT_DIRECTIVE_CHARS]) {
+    if (directives_count == 0) { init_directives(); }
+    Fmt_Directive *dir = bsearch(name, directives, directives_count, sizeof(Fmt_Directive), directive_cmp);
+    return dir ? dir->fmt : NULL;
 }
 
 String format_to(Byte_Slice dest, cstring fmt, ...) {
@@ -39,38 +67,87 @@ String format_to(Byte_Slice dest, cstring fmt, ...) {
     return result;
 }
 
+
 String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
-    char *begin = (char*)dest.begin;
+    char *cursor = dest.begin;
 
-    while(*fmt != '\0' && dest.begin < dest.end) {
-        if (fmt[0] == '{') {
-            fmt++;
+    for(u64 i = 0; cursor < dest.end; ++i) {
+        switch(fmt[i]) {
+            case '\0': return (String){dest.begin, cursor};
+            case '{':
+                ++i;
+                if (fmt[i] == '{') {
+                    *cursor++ = fmt[i];
+                } else {
+                    char directive[FORMAT_DIRECTIVE_CHARS] = {0};
 
-            const char *keyword = fmt;
-            for(; *fmt != '\0' && *fmt != '}'; fmt++);
-            if (*fmt == '\0') { exit(69); }
-            const i32 keyword_len = fmt - keyword;
-            fmt++;
-            i32 idx = 0;
-            for(; idx < directives_count; idx++) {
-                if (!strncmp(directives[idx].directive, keyword, keyword_len)) {
+                    for (; fmt[i] == ' ' || fmt[i] == '\t'; ++i);
+
+                    for (int j = 0; fmt[i] != '\0'; ++i, ++j) {
+                        if (fmt[i] == ' ' || fmt[i] == '\t' || fmt[i] == '}') { break; }
+                        if (j >= FORMAT_DIRECTIVE_CHARS) {
+                            fputs("[ERROR]: format directive longer than 16 bytes in format string:\n`", stderr);
+                            fputs(fmt, stderr);
+                            fputs("`\n", stderr);
+                            return (String){0};
+                        }
+                        directive[j] = fmt[i];
+                    }
+
+                    // for now, ignore up to '}'
+                    // TODO: parse optional format options
+                    for (; fmt[i] != '}' && fmt[i] != '\0'; ++i);
+
+                    if (fmt[i] == '\0') {
+                        fputs("[ERROR]: unmatched format delimiter `{` in format string:\n`", stderr);
+                        fputs(fmt, stderr);
+                        fputs("`\n", stderr);
+                        return (String){0};
+                    }
+
+                    // TODO: extract into a function?
+                    {
+                        // count the trailing '}': they must be an odd number in order for one of them to be matched 
+                        // to the opening '{'.
+                        int j = 0;
+                        for(; fmt[i+j] == '}'; j++);
+                        if (j % 2 == 0) {
+                            fputs("[ERROR]: escape sequence `}}` illegal in format directive:\n`", stderr);
+                            fputs(fmt, stderr);
+                            fputs("`\n", stderr);
+                            return (String){0};
+                        }
+                    }
+
+                    fmt_procedure_t fmt_proc = lookup_format_directive(directive);
+                    if (fmt_proc == NULL) {
+                        fputs("[ERROR]: unknown format directive `", stderr);
+                        fputs(directive, stderr);
+                        fputs("` in format string.\n", stderr);
+                        return (String){0};
+                    }
+
                     Fmt_Info info = {0};
-                    dest.begin += directives[idx].fmt(dest, params, info);
-                    break;
+                    cursor += fmt_proc( (Byte_Slice){cursor, dest.end}, params, info);
                 }
-            }
-            if (idx == directives_count) {
-                fputs("[ERROR]: unknown format directive `", stderr);
-                fwrite(keyword, 1, keyword_len, stderr);
-                fputs("`\n", stderr);
-            }
-        } else {
-            *dest.begin++ = *fmt++;
+                break;
+            case '}':
+                if (fmt[i + 1] == '}')
+                    *cursor++ = fmt[i++];
+                else {
+                    fputs("[ERROR]: unmatched format delimiter `}` in format string:\n`", stderr);
+                    fputs(fmt, stderr);
+                    fputs("`\n", stderr);
+                }
+                break;
+            default:
+                *cursor++ = fmt[i];
+                break;
         }
     }
 
-    char *end = (char*)dest.begin;
-    return (String){begin, end};
+    fputs("[ERROR]: format buffer is full, output may be truncated\n", stderr);
+    return (String){dest.begin, cursor};
 }
 
 i64 fmt_i64(Byte_Slice destination, i64 val, Fmt_Info info) {
@@ -188,7 +265,7 @@ i64 fmt_error_va(Byte_Slice dest, va_list va, Fmt_Info info) {
 
 i64 fmt_location(Byte_Slice dest, Location loc, Fmt_Info info) {
     info = (Fmt_Info){0};
-    u8 *const begin = dest.begin;
+    char *const begin = dest.begin;
     dest.begin += fmt_cstr (dest, loc.fname,   info);
     dest.begin += fmt_rune (dest, ':',         info);
     dest.begin += fmt_u64  (dest, loc.row + 1, info);

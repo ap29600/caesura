@@ -10,25 +10,26 @@
 #include "error.h"
 
 typedef struct {
-    u8 *begin;
-    u8 *end;
+    char *begin;
+    char *end;
 } Byte_Slice;
 
 typedef struct {
     char pad_with;
 } Fmt_Info;
 
+#define FORMAT_DIRECTIVE_CHARS 16
+typedef i64(*fmt_procedure_t)(Byte_Slice, va_list, Fmt_Info);
 typedef struct {
-    char directive[16];
-    i64 (*fmt)(Byte_Slice destination, va_list va, Fmt_Info info);
+    char directive[FORMAT_DIRECTIVE_CHARS];
+    fmt_procedure_t fmt;
 } Fmt_Directive;
 
-extern u8            default_format_buffer_data[4096];
+extern char          default_format_buffer_data[4096];
 extern Byte_Slice    default_format_buffer;
-extern Fmt_Directive directives[256];
-extern u64           directives_count;
 
-bool register_format_directive(Fmt_Directive directive);
+bool            register_format_directive(Fmt_Directive directive);
+fmt_procedure_t lookup_format_directive(const char begin[FORMAT_DIRECTIVE_CHARS]);
 
 String format_to(Byte_Slice data, const char *fmt, ...);
 String format_to_va(Byte_Slice dest, cstring fmt, va_list params);
