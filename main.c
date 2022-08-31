@@ -92,25 +92,27 @@ i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
 
 String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
     u64 begin = parsed_bytes(parser);
+    rune c = peek(parser);
+    parser->error = None;
 
-    for(rune c; (c = peek(parser)) != '\0'; next(parser)) {
-        if (get_bit(whitespace, c)) {
-            parser->error = Trailing_Chars;
-            return slice(parser->source, begin, parsed_bytes(parser));
-        }
-
-        if (get_bit(specials, c)) {
-            if (parsed_bytes(parser) == begin) {
-                next(parser);
-                parser->error = parser_is_empty(parser) ? None : Trailing_Chars;
-            } else {
-                parser->error = Trailing_Chars;
-            }
-            return slice(parser->source, begin, parsed_bytes(parser));
-        }
+    // empty operator
+    if (c == '\0' || get_bit(whitespace, c)) {
+        parser->error = Invalid_Parse;
+        return slice(parser->source, begin, parsed_bytes(parser));
     }
 
-    parser->error = None;
+
+    if (get_bit(specials, c)) {
+        next(parser);
+        return slice(parser->source, begin, parsed_bytes(parser));
+    }
+
+    next(parser);
+
+    for(; (c = peek(parser)) != '\0'; next(parser)) {
+        if (get_bit(whitespace, c) || get_bit(specials, c)) { break; }
+    }
+
     return slice(parser->source, begin, parsed_bytes(parser));
 }
 
@@ -134,22 +136,16 @@ Token next_token(Parser_State *parser) {
         } break;
         case Float: {
             f64 value = parse_f64(parser);
-            switch(parser->error) {
-                case None: // fallthrough
-                case Trailing_Chars: {
-                    char trail = peek(parser);
-                    if (get_bit(whitespace, trail) || get_bit(specials, trail))
-                        return (Token){Float, .value = value, loc, true};
-                } // fallthrough;
-                default: {
-                    report_state(parser, stderr);
-                    for (char c; (c = peek(parser)) != '\0'; next(parser))
-                        if (get_bit(whitespace, c) || get_bit(specials, c))
-                            break;
-                    String text = slice(parser->source, loc.byte, parsed_bytes(parser));
-                    parser->error = None;
-                    return (Token){Float, .text = text, loc, false};
-                } break;
+            if (parser->error == None) {
+                return (Token){Float, .value = value, .loc = loc, .is_valid = true};
+            } else {
+                report_state(parser, stderr);
+                for (char c; (c = peek(parser)) != '\0'; next(parser))
+                    if (get_bit(whitespace, c) || get_bit(specials, c))
+                        break;
+                String text = slice(parser->source, loc.byte, parsed_bytes(parser));
+                parser->error = None;
+                return (Token){Float, .text = text, loc, false};
             }
         } break;
         case Operator: {

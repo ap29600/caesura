@@ -3,9 +3,9 @@
 
 typedef enum {
     None = 0,
-    Trailing_Chars,
-    Truncated_Literal,
-    Unexpected_Char,
+    Empty_Parse,
+    Invalid_Exponent,
+    Invalid_Parse,
     Num_Errors,
 } Error;
 

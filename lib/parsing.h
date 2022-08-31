@@ -18,7 +18,6 @@ typedef struct {
     Error    error;
 } Parser_State;
 
-/// forward declarations
 f64  parse_f64     (Parser_State *parser);
 f64  parse_decimal (Parser_State *parser);
 i32  parse_sign    (Parser_State *parser);

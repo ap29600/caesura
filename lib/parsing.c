@@ -56,61 +56,44 @@ static f64 pow_(f64 base, i32 expt) {
 i32 parse_sign(Parser_State *parser) {
     i32 result;
     switch(peek(parser)) {
-        case '+': next(parser); result =  1; break;
-        case '-': next(parser); result = -1; break;
-        default:                    result =  1; break;
+        case '+': next(parser); parser->error = None;          return  1;
+        case '-': next(parser); parser->error = None;          return -1;
+        default:                parser->error = Empty_Parse;   return  1;
     }
-    parser->error = parser_is_empty(parser) ? None : Trailing_Chars;
-    return result;
 }
 
 #define NaN (0.0/0.0);
 f64 parse_f64(Parser_State *parser) {
     f64 sign = (f64)parse_sign(parser);
-    switch (parser->error) {
-        case Trailing_Chars: break;
-        case None:
-            parser->error = Truncated_Literal;
-            return NaN;
-        default: return NaN;
-    }
+    bool has_sign = parser->error == None;
 
     f64 integral = (f64)parse_u64(parser);
-    switch (parser->error) {
-        case Trailing_Chars: break;
-        case None: return sign * integral;
-        default: return NaN;
-    }
+    bool has_digits = parser->error == None;
 
     f64 decimal = 0.0;
+    bool has_dot = false;
     if (peek(parser) == '.') {
+        has_dot = true;
         next(parser);
         decimal = parse_decimal(parser);
-        switch(parser->error) {
-            case None: return sign * (integral + decimal);
-            case Trailing_Chars: break;
-            default: return NaN;
-        }
+        has_digits |= parser->error == None;
+    }
+
+    if (!has_digits) {
+        parser->error = (has_sign || has_dot) ? Invalid_Parse : Empty_Parse;
+        return NaN;
     }
 
     i32 expt = 0;
     if (peek(parser) == 'e') {
         next(parser);
         expt = parse_sign(parser);
-        switch(parser->error) {
-            case Trailing_Chars: break;
-            case None: parser->error = Truncated_Literal;
-            default: return NaN;
-        }
-        const u64 state_before_expt = parsed_bytes(parser);
+        // ignore errors, sign is optional and default is +.
+
         expt *= (i32)parse_u64(parser);
-        switch(parser->error) {
-            case Trailing_Chars: break;
-            case None:           break;
-            default: return NaN;
-        }
-        if (parsed_bytes(parser) == state_before_expt) {
-            parser->error = Truncated_Literal;
+        // exponent is present but not valid
+        if (parser->error != None) {
+            parser->error = Invalid_Exponent;
             return NaN;
         }
     }
@@ -128,12 +111,7 @@ f64 parse_f64(Parser_State *parser) {
         default:;
     }
 
-    if (parser_is_empty(parser)) {
-        parser->error = None;
-    } else {
-        parser->error = Trailing_Chars;
-    }
-
+    parser->error = None;
     f64 result = sign * (integral + decimal) * pow_(10.0, expt);
     result = is_f64_precision ? result : (f64)(f32)result;
 
@@ -143,6 +121,14 @@ f64 parse_f64(Parser_State *parser) {
 /// given the string "1'234" returns 1234UL.
 /// the empty string "" returns 0UL.
 u64 parse_u64(Parser_State *parser) {
+    rune c = peek(parser);
+    if (c < '0' || '9' < c) {
+        parser->error = Empty_Parse;
+        return 0;
+    }
+
+    // first element is a valid digit, from now on every parse is valid
+    parser->error = None;
     u64 result = 0;
     for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
         if ('0' <= c && c <= '9') {
@@ -150,11 +136,9 @@ u64 parse_u64(Parser_State *parser) {
         } else if ( c == '\'' || c == '_') {
             // Nothing
         } else {
-            parser->error = Trailing_Chars;
-            return result;
+            break;
         }
     }
-    parser->error = None;
     return result;
 }
 
@@ -162,21 +146,25 @@ u64 parse_u64(Parser_State *parser) {
 /// given the string "123'4", returns 0.1234d.
 /// the empty string ""       returns 0.0d.
 f64 parse_decimal(Parser_State *parser) {
-    f64 result = 0.0;
-    f64 unit   = 1.0;
+    rune c = peek(parser);
+    if (c < '0' || '9' < c) {
+        parser->error = Empty_Parse;
+        return 0;
+    }
 
+    // first element is a valid digit, from now on every parse is valid
+    parser->error = None;
+    f64 result = 0;
+    f64 unit   = 1.0;
     for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
         if ('0' <= c && c <= '9') {
             result += (unit /= 10UL) * (c - '0');
         } else if ( c == '\'' || c == '_') {
             // Nothing
         } else {
-            parser->error = Trailing_Chars;
-            return result;
+            break;
         }
     }
-
-    parser->error = None;
     return result;
 }
 
