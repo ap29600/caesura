@@ -1,1 +1,7 @@
 -xc
+-Wpedantic
+-Werror
+-Wimplicit
+-Wall
+-Wno-unused-function
+-std=c2x

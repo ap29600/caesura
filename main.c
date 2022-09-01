@@ -147,7 +147,7 @@ static Token next_token(Parser_State *parser) {
             if (parser->error == None) {
                 return (Token){Float, .value = value, .loc = loc, .is_valid = true};
             } else {
-                report_state(parser, stderr);
+                // report_state(parser, stderr);
                 for (char c; (c = peek(parser)) != '\0'; next(parser))
                     if (get_bit(whitespace, c) || get_bit(specials, c))
                         break;
@@ -188,12 +188,41 @@ static Parser_State parser_from_filename(const char *filename) {
 i32 main(i32 argc, char **argv) {
     register_format_directive((Fmt_Directive){"Token", fmt_token_va});
 
+    u64 valid_float   = 0;
+    u64 valid_op      = 0;
+    u64 invalid_float = 0;
+    u64 invalid_op    = 0;
+    u64 empty         = 0;
+
     Parser_State parser = parser_from_filename(argv[1]);
     for (; !parser_is_empty(&parser); ) {
         Token tok = next_token(&parser);
-        if (tok.type == Empty) continue;
-        if (!tok.is_valid) format_println("{Token}", tok);
+
+        switch(tok.type) {
+            case Float:
+                if (tok.is_valid) ++valid_float;
+                else ++invalid_float;
+                break;
+            case Operator:
+                if (tok.is_valid) ++valid_op;
+                else ++invalid_op;
+                break;
+            case Empty:
+                ++empty;
+                break;
+        }
     }
+
+    format_print("float:\n"
+                 "\tvalid:   {u64}\n"
+                 "\tinvalid: {u64}\n",
+                 valid_float, invalid_float);
+    format_print("op:\n"
+                 "\tvalid:   {u64}\n"
+                 "\tinvalid: {u64}\n",
+                 valid_op, invalid_op);
+    format_print("empty: {u64}\n", empty);
+
     delete_str(&parser.source);
     return 0;
 }

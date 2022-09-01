@@ -27,6 +27,8 @@ static String string_from_cstring(cstring s) {
 }
 
 static String slice(String s, i64 begin, i64 end) {
+    assert(begin <= s.end - s.begin);
+    assert(end   <= s.end - s.begin);
     return (String) {
         .begin = begin >= 0 ? (s.begin + begin) : s.begin,
         .end   = end   >= 0 ? (s.begin + end)   : s.end,

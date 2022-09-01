@@ -92,7 +92,8 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                             fputs("[ERROR]: format directive longer than 16 bytes in format string:\n`", stderr);
                             fputs(fmt, stderr);
                             fputs("`\n", stderr);
-                            return (String){0};
+                            fflush(stderr);
+                            exit(1);
                         }
                         directive[j] = fmt[i];
                     }
@@ -105,7 +106,8 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                         fputs("[ERROR]: unmatched format delimiter `{` in format string:\n`", stderr);
                         fputs(fmt, stderr);
                         fputs("`\n", stderr);
-                        return (String){0};
+                        fflush(stderr);
+                        exit(1);
                     }
 
                     // TODO: extract into a function?
@@ -118,7 +120,8 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                             fputs("[ERROR]: escape sequence `}}` illegal in format directive:\n`", stderr);
                             fputs(fmt, stderr);
                             fputs("`\n", stderr);
-                            return (String){0};
+                            fflush(stderr);
+                            exit(1);
                         }
                     }
 
@@ -127,7 +130,8 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                         fputs("[ERROR]: unknown format directive `", stderr);
                         fputs(directive, stderr);
                         fputs("` in format string.\n", stderr);
-                        return (String){0};
+                        fflush(stderr);
+                        exit(1);
                     }
 
                     Fmt_Info info = {0};
@@ -135,12 +139,14 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                 }
                 break;
             case '}':
-                if (fmt[i + 1] == '}')
+                if (fmt[i + 1] == '}') {
                     *cursor++ = fmt[i++];
-                else {
+                } else {
                     fputs("[ERROR]: unmatched format delimiter `}` in format string:\n`", stderr);
                     fputs(fmt, stderr);
                     fputs("`\n", stderr);
+                    fflush(stderr);
+                    exit(1);
                 }
                 break;
             default:
@@ -150,7 +156,8 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
     }
 
     fputs("[ERROR]: format buffer is full, output may be truncated\n", stderr);
-    return (String){dest.begin, cursor};
+    fflush(stderr);
+    exit(1);
 }
 
 i64 fmt_i64(Byte_Slice destination, i64 val, Fmt_Info info) {

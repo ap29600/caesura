@@ -23,15 +23,17 @@ void report_state(Parser_State *parser, FILE *stream) {
 
     // delimit the line;
     while(line_begin > begin && *(line_begin-1) != '\n') line_begin--;
-    while(line_end < end     && *line_end != '\n')       line_end++;
+    while(line_end   < end   && *line_end       != '\n') line_end++;
 
-    String spaces = string_from_cstring("                              ");
     String before_err = {line_begin, begin + parsed_bytes(parser)};
     String after_err = {begin + parsed_bytes(parser), line_end};
 
     format_println("{loc}: [ERROR `" COL_RED_F "{error}" RESET "`]", parser->location, parser->error);
     format_println(COL_BLU_F "{str}" COL_RED_F "{str}" RESET, before_err, after_err);
-    format_println("{str}^", slice(spaces, -1, parser->location.col));
+
+    u64 col = parser->location.col;
+    while (col--) { putchar(' '); }
+    puts("^\n");
 }
 
 
@@ -54,7 +56,6 @@ static f64 pow_(f64 base, i32 expt) {
 
 
 i32 parse_sign(Parser_State *parser) {
-    i32 result;
     switch(peek(parser)) {
         case '+': next(parser); parser->error = None;          return  1;
         case '-': next(parser); parser->error = None;          return -1;
