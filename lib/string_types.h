@@ -1,0 +1,45 @@
+#ifndef FZR_STRING_TYPES
+#define FZR_STRING_TYPES
+
+#include "builtin.h"
+#include <assert.h>
+#include <string.h>
+
+typedef struct {
+    cstring begin;
+    cstring end;
+} String;
+
+static u64 string_len(String s) {
+    return s.end - s.begin;
+}
+
+static u64 rune_width(rune r) {
+    if (r < 0x000080) return 1;
+    if (r < 0x000800) return 2;
+    if (r < 0x010000) return 3;
+    if (r < 0x110000) return 4;
+    assert(false);
+}
+
+static String string_from_cstring(cstring s) {
+    return (String){s, s + strlen(s)};
+}
+
+static String slice(String s, i64 begin, i64 end) {
+    return (String) {
+        .begin = begin >= 0 ? (s.begin + begin) : s.begin,
+        .end   = end   >= 0 ? (s.begin + end)   : s.end,
+    };
+}
+
+static bool empty_string(String s) {
+    return s.end == s.begin;
+}
+
+static bool empty_cstring(cstring s) {
+    return s == NULL || *s == '\0';
+}
+
+#endif
+

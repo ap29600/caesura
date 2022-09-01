@@ -25,7 +25,7 @@ void report_state(Parser_State *parser, FILE *stream) {
     while(line_begin > begin && *(line_begin-1) != '\n') line_begin--;
     while(line_end < end     && *line_end != '\n')       line_end++;
 
-    String spaces = string_from("                              ");
+    String spaces = string_from_cstring("                              ");
     String before_err = {line_begin, begin + parsed_bytes(parser)};
     String after_err = {begin + parsed_bytes(parser), line_end};
 

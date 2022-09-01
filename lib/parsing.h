@@ -1,22 +1,8 @@
 #ifndef FZR_PARSING
 #define FZR_PARSING
 
-#include "builtin.h"
-#include "string.h"
-#include "error.h"
-
-typedef struct {
-    u32 row;
-    u32 col;
-    u64 byte;
-    cstring fname;
-} Location;
-
-typedef struct {
-    String   source;
-    Location location;
-    Error    error;
-} Parser_State;
+#include <stdio.h>
+#include "parsing_types.h"
 
 f64  parse_f64     (Parser_State *parser);
 f64  parse_decimal (Parser_State *parser);
@@ -24,30 +10,31 @@ i32  parse_sign    (Parser_State *parser);
 u64  parse_u64     (Parser_State *parser);
 void report_state  (Parser_State *parser, FILE *stream);
 
-static inline bool  parser_is_empty (const Parser_State *parser);
-static inline u64   parsed_bytes    (const Parser_State *parser);
-static inline rune  peek            (const Parser_State *parser);
-static inline rune  next            (      Parser_State *parser);
+static bool  parser_is_empty (const Parser_State *parser);
+static u64   parsed_bytes    (const Parser_State *parser);
+static rune  peek            (const Parser_State *parser);
+static rune  next            (      Parser_State *parser);
 
 /// static inline functions
 
-static inline bool parser_is_empty(const Parser_State *parser) {
+static bool parser_is_empty(const Parser_State *parser) {
     const u64 len = parser->source.end - parser->source.begin;
     return parser->location.byte >= len;
 }
 
-static inline u64 parsed_bytes(const Parser_State *parser) {
+static u64 parsed_bytes(const Parser_State *parser) {
     return parser->location.byte;
 }
 
-static inline rune peek(const Parser_State *parser) {
+static rune peek(const Parser_State *parser) {
     if (!parser_is_empty(parser)) {
+        // TODO: handle utf-8
         return parser->source.begin[parsed_bytes(parser)];
     }
     return '\0';
 }
 
-static inline rune next(Parser_State *parser) {
+static rune next(Parser_State *parser) {
     const rune result = peek(parser);
     const unsigned tab_width = 8;
     switch(result) {
@@ -64,7 +51,7 @@ static inline rune next(Parser_State *parser) {
                 ((parser->location.col / tab_width) + 1) * tab_width;
             break;
         default:
-            parser->location.byte++;
+            parser->location.byte += rune_width(result);
             parser->location.col++;
             break;
     }

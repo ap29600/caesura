@@ -1,6 +1,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <assert.h>
+
+#include "string.h"
 #include "format.h"
 #include "error.h"
 

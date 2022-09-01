@@ -2,31 +2,14 @@
 #define FZR_FORMAT
 
 #include <stdbool.h>
-#include <stdarg.h>
+#include <stdio.h>
 
-#include "builtin.h"
-#include "parsing.h"
-#include "string.h"
-#include "error.h"
+#include "format_types.h"
+#include "parsing_types.h"
+#include "string_types.h"
 
-typedef struct {
-    char *begin;
-    char *end;
-} Byte_Slice;
-
-typedef struct {
-    char pad_with;
-} Fmt_Info;
-
-#define FORMAT_DIRECTIVE_CHARS 16
-typedef i64(*fmt_procedure_t)(Byte_Slice, va_list, Fmt_Info);
-typedef struct {
-    char directive[FORMAT_DIRECTIVE_CHARS];
-    fmt_procedure_t fmt;
-} Fmt_Directive;
-
-extern char          default_format_buffer_data[4096];
-extern Byte_Slice    default_format_buffer;
+extern char       default_format_buffer_data[4096];
+extern Byte_Slice default_format_buffer;
 
 bool            register_format_directive(Fmt_Directive directive);
 fmt_procedure_t lookup_format_directive(const char begin[FORMAT_DIRECTIVE_CHARS]);

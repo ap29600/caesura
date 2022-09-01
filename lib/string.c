@@ -1,25 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "string.h"
 #include "bit_set.h"
-
-String slice(String s, i64 begin, i64 end) {
-    return (String) {
-        .begin = begin >= 0 ? (s.begin + begin) : s.begin,
-        .end = end >= 0 ? (s.begin + end) : s.end,
-    };
-}
-
-u64 strlen_(cstring s) {
-    u64 result = 0;
-    if (s != NULL) {
-        while (*s) {
-            s++;
-            result++;
-        }
-    }
-    return result;
-}
 
 u64 string_index_rune(String s, rune c) {
     // TODO: handle utf-8 decoding
@@ -55,14 +38,6 @@ u64 string_index_any(String s, const rune *c) {
     return s.end - s.begin;
 }
 
-bool empty_string(String s) {
-    return s.end == s.begin;
-}
-
-bool empty_cstring(cstring s) {
-    return s == NULL || *s == '\0';
-}
-
 String string_split_rune(String *it, rune delim) {
     String result = (String){
         .begin = it->begin,
@@ -88,10 +63,6 @@ String string_split_any(String *it, const rune *delims) {
 void delete_str(String *s) {
     free((void *)s->begin);
     *s = (String){0};
-}
-
-String string_from_cstring(cstring s) {
-    return (String){s, s + strlen_(s)};
 }
 
 String string_from_stream(FILE *is) {

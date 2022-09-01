@@ -1,9 +1,9 @@
 #include "lib/builtin.h"
 #include "lib/error.h"
-#include "lib/string.h"
 #include "lib/parsing.h"
 #include "lib/bit_set.h"
 #include "lib/format.h"
+#include "lib/string.h"
 
 #include <assert.h>
 #include <stdarg.h>
@@ -44,7 +44,6 @@ static Token_Type classify(Parser_State *parser) {
     return Operator;
 }
 
-
 #define CONSOLE_COLORS
 #ifdef CONSOLE_COLORS
     #define RESET "\x1b[0m"
@@ -58,7 +57,7 @@ static Token_Type classify(Parser_State *parser) {
     #define COL_BLU_F ""
 #endif
 
-i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
+static i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     info = (Fmt_Info){0};
     Token tok = va_arg(va, Token);
     char *const begin = dest.begin;
@@ -90,7 +89,7 @@ i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     return dest.begin - begin;
 }
 
-String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
+static String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
     u64 begin = parsed_bytes(parser);
     rune c = peek(parser);
     parser->error = None;
@@ -101,14 +100,13 @@ String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials
         return slice(parser->source, begin, parsed_bytes(parser));
     }
 
-
+    // consume a special rune
     if (get_bit(specials, c)) {
         next(parser);
         return slice(parser->source, begin, parsed_bytes(parser));
     }
 
     next(parser);
-
     for(; (c = peek(parser)) != '\0'; next(parser)) {
         if (get_bit(whitespace, c) || get_bit(specials, c)) { break; }
     }
@@ -116,7 +114,7 @@ String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials
     return slice(parser->source, begin, parsed_bytes(parser));
 }
 
-void ensure_total_parse(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
+static void ensure_total_parse(Parser_State *parser, Bit_Set whitespace, Bit_Set specials) {
     if (parser->error == None) {
         rune r = peek(parser);
         if (!get_bit(whitespace, r) && !get_bit(specials, r)) {
@@ -125,7 +123,7 @@ void ensure_total_parse(Parser_State *parser, Bit_Set whitespace, Bit_Set specia
     }
 }
 
-Token next_token(Parser_State *parser) {
+static Token next_token(Parser_State *parser) {
     static u64 whitespace_data[256 / BITS];
     static Bit_Set whitespace;
     if (whitespace.data == NULL)
@@ -166,9 +164,9 @@ Token next_token(Parser_State *parser) {
     }
 }
 
-Parser_State parser_from_filename(const char *filename) {
+static Parser_State parser_from_filename(const char *filename) {
     if (!filename) {
-        println(string_from("[ERROR]: no filename was provided"));
+        println(string_from_cstring("[ERROR]: no filename was provided"));
         return (Parser_State){0};
     }
 
@@ -179,7 +177,7 @@ Parser_State parser_from_filename(const char *filename) {
     }
 
     Parser_State result = {
-        .source = string_from(file),
+        .source = string_from_stream(file),
         .location = {.fname = filename},
         .error = None,
     };

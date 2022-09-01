@@ -1,7 +1,8 @@
 #ifndef FZR_BIT_SET
 #define FZR_BIT_SET
+
 #include <stdbool.h>
-#include "string.h"
+#include "builtin.h"
 
 typedef struct {
     u64* data;

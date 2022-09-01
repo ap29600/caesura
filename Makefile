@@ -1,4 +1,4 @@
-WARN  = -Wpedantic -Werror -Wimplicit -Wall
+WARN  = -Wpedantic -Werror -Wimplicit -Wall -Wno-unused-function
 STD   = -std=c2x
 OPT   = -O0
 LINK  = -lm -L./obj -lstring -lparsing -lformat -lerror
