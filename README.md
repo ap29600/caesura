@@ -7,8 +7,8 @@ An array programming language with a focus on tacit programming and expressivity
 a caesura program is composed of tokens.
 a token may be:
 - a literal scalar value (`floating`, `integer`, `boolean`, `character`)
-- an identifier: a string matching `[^,.():space:]+`.
-- a special operator: one of `.`, `,`, `(`, `)`, `:=`.
+- an identifier: a string matching `[^.,'():space:]+`.
+- a special operator: one of `.`, `,`, `'`, `(`, `)`, `:=`.
 
 ### expression
 
@@ -16,22 +16,32 @@ a literal value, identifier or function application
 
 ### function application
 
-caesura by default uses infix notation, and function application is done by adjunction of the function and the value(s).
-- caesura: `a f b`
-- lisp:    `(f a b)`
+in Caesura, functions may be monadic or dyadic, meaning they take either one or two arguments.
+Scalars and arrays can be seen as special cases of nonadic functions (zero-argument functions).
 
-note that it does not matter whether `a` or `b` are functions or data, as functions in caesura are entirely first-class:
-the result of `a f b` is then equivalent to: `(lambda (x y) (f (a x y) (b x y)))` which is usually called a train in array languages.
+Caesura uses infix notation, and function application is done by adjoining the function and the value(s).
+- a monadic function has its only argument on the right: `f x` (equivalent to lisp's `(f x)`)
+- a dyadic function has a left argument and a right argument: `y f x` (equivalent to lisp's `(f x y)`)
+
+Note that it does not matter whether `a` or `b` are functions or data: the result of `a f b` is equivalent to: 
+`(lambda (x y) (f (a x y) (b x y)))` which is usually called a train in array languages.
 If `a` or `b` only take one argument (or take none) then the left argument is discarded first, then the right.
-In this sense, scalars and arrays can be seen as special cases of nonadic functions that evaluate to their content.
 
-#### special form: function composition
+#### forcing monadic or dyadic application
 
-often, the programmer will want to apply a function on the result of a previous function application, as in lisp: `(f (g 10))`;
-however trying to do so by adjunction (caesura: `f g 10`) does not indicate composition in the usual way.
-The obvious way to achieve this is to use parentheses (caesura: `f (g 10)`) however if many functions are composed the syntax may be uncomfortable.
-the special operator `.` signifies function composition, and the expression `f.g` does not evaluate to `(lambda (x y) ('.' (f x y) (g x y)))`,
-but rather to `(lambda (x y) (f (g x y)))`. The `.` operator has higher precedence than function application.
+While writing complex expressions, monadic or dyadic application can be enforced by the following operators: `'`, `.`
+
+- the operator `'` enforces dyadic application of its right argument on its left argument and an additional argument on the right,
+    and it has a precedence of 2. The expression `y'f x` is similar to lisp's `(f x y)`. This syntax will enforce dyadic
+    application even when the right argument is not present: `y f` usually denotes applying the function `y` monadically
+    to the argument `f`, but `y'f` denotes partial application of the function `f` to the left argument `y` and evaluates
+    to the monadic function `(lambda (x) (f x y))`
+
+- the operator `.` enforces monadic application of its left argument to its right argument, and it has a precedence of 1.
+    the expression `f.x` is similar to lisp's `(f x)`. crucially, if `x` is itself a function, `.` can be interpreted as
+    denoting function composition.
+
+for reference, regular function application by adjacency has a precedence of 1.
 
 ### assignment
 
@@ -40,3 +50,21 @@ the following cases are possible:
 - `a := (...)`: `(...)` is evaluated and the result is bound to the identifier `a`
 - `f g := (...) ` where `(...)` is an expression (possibly making use of `g`): binds to `f` the monadic function whose value is `(...)` when applied to the formal parameter `g`.
 - `h f g := (...) ` where `(...)` is an expression (possibly making use of `g` and `h`): binds to `f` the dyadic function whose value is `(...)` when applied to the formal parameters `g` and `h`.
+
+### primitives:
+
+| symbol |       monadic        |        dyadic        |
+|--------|----------------------|----------------------|
+|  `*`   |        square        | multiplication (AND) |
+|  `+`   |       identity       |    addition  (OR)    |
+|  `-`   | arithmetic negation  |     subtraction      |
+|  `~`   | 1's complement (NOT) |    mismatch (XOR)    |
+|  `\|`  |         ---          |        rotate        |
+
+### examples:
+
+|      name       |  type   |   explicit definition    | tacit definition (explicit) | tacit definition (operators) |
+|-----------------|---------|--------------------------|-----------------------------|------------------------------|
+|    increment    | monadic |     `inc x := 1 + x`     |       `inc := 1 + ->`       |         `inc := 1'+`         |
+| successive diff | monadic | `diff x := (1 \| x) - x` |  `diff := (1 \| ->) - ->`   |      `diff := (1'\|)'-`      |
+
