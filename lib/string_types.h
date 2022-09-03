@@ -27,11 +27,16 @@ static String string_from_cstring(cstring s) {
 }
 
 static String slice(String s, i64 begin, i64 end) {
+    begin = begin >= 0 ? begin : 0;
+    end   = end   >= 0 ? end   : s.end - s.begin;
+
     assert(begin <= s.end - s.begin);
     assert(end   <= s.end - s.begin);
+    assert(begin <= end);
+
     return (String) {
-        .begin = begin >= 0 ? (s.begin + begin) : s.begin,
-        .end   = end   >= 0 ? (s.begin + end)   : s.end,
+        .begin = s.begin + begin,
+        .end   = s.begin + end, 
     };
 }
 

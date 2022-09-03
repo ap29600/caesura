@@ -1,5 +1,6 @@
 #include "parsing.h"
 #include "format.h"
+#include "string.h"
 
 #define CONSOLE_COLORS
 #ifdef CONSOLE_COLORS
@@ -169,3 +170,32 @@ f64 parse_decimal(Parser_State *parser) {
     return result;
 }
 
+void ensure_total_parse(Parser_State *parser, Bit_Set delimiters) {
+    if (parser->error == None) {
+        rune r = peek(parser);
+        if (!get_bit(delimiters, r)) {
+            parser->error = Invalid_Parse;
+        }
+    }
+}
+
+Parser_State parser_from_filename(const char *filename) {
+    if (!filename) {
+        println(string_from_cstring("[ERROR]: no filename was provided"));
+        return (Parser_State){0};
+    }
+
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        format_println("[ERROR]: unable to open file `{cstr}`", filename);
+        return (Parser_State){0};
+    }
+
+    Parser_State result = {
+        .source = string_from_stream(file),
+        .location = {.fname = filename},
+        .error = None,
+    };
+    fclose(file);
+    return result;
+}

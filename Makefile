@@ -18,12 +18,8 @@ test: main $(INPUT)
 clean:
 	$(RM) main main.o obj/*
 
-main: main.o $(LIBS)
-	$(CC) -fPIC $(DEBUG) -o $@ $< $(LINK) $(OPT)
-
-
-main.o: main.c $(SRC)/*.h
-	$(CC) -fPIC -c $(OPT) $(DEBUG) $(WARN) $(STD) $<
+main: *.c $(LIBS)
+	$(CC) $(DEBUG) -o $@ *.c $(LINK) $(OPT)
 
 $(OBJ)/%.a: $(OBJ)/%.o
 	ar rcs $@ $<

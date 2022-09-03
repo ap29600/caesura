@@ -95,3 +95,20 @@ String string_from_stream(FILE *is) {
         return (String){data, data + len};
     }
 }
+
+bool string_eq_cstring(String a, const char *b) {
+    u64 len = string_len(a);
+    for (int i = 0; i < len; i++) {
+        if (b[i] != a.begin[i]) return false;
+    }
+    return b[len] == '\0';
+}
+
+bool string_eq_string(String a, String b) {
+    u64 a_len = string_len(a);
+    u64 b_len = string_len(b);
+
+    if (a_len != b_len) return false;
+    return memcmp(a.begin, b.begin, a_len) == 0;
+}
+

@@ -3,12 +3,15 @@
 
 #include <stdio.h>
 #include "parsing_types.h"
+#include "bit_set.h"
 
 f64  parse_f64     (Parser_State *parser);
 f64  parse_decimal (Parser_State *parser);
 i32  parse_sign    (Parser_State *parser);
 u64  parse_u64     (Parser_State *parser);
 void report_state  (Parser_State *parser, FILE *stream);
+void ensure_total_parse(Parser_State *parser, Bit_Set delimiters);
+Parser_State parser_from_filename(const char *filename);
 
 static bool  parser_is_empty (const Parser_State *parser);
 static u64   parsed_bytes    (const Parser_State *parser);
