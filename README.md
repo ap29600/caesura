@@ -41,7 +41,7 @@ While writing complex expressions, monadic or dyadic application can be enforced
     the expression `f.x` is similar to lisp's `(f x)`. crucially, if `x` is itself a function, `.` can be interpreted as
     denoting function composition.
 
-for reference, regular function application by adjacency has a precedence of 1.
+for reference, regular function application by adjacency has a precedence of 0.
 
 ### assignment
 
@@ -60,6 +60,9 @@ the following cases are possible:
 |  `-`   | arithmetic negation  |     subtraction      |
 |  `~`   | 1's complement (NOT) |    mismatch (XOR)    |
 |  `\|`  |         ---          |        rotate        |
+|  `->`  |       identity       |    right argument    |
+|  `<-`  |         ---          |    left argument     |
+
 
 ### examples:
 
