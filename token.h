@@ -15,6 +15,7 @@ typedef enum {
     Monad,
     Dyad,
     Assign,
+    Immediate,
     LParen,
     RParen,
     Num_Operators,

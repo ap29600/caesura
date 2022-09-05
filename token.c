@@ -15,7 +15,7 @@ Token_Type classify(Parser_State *parser) {
         case '5': case '6': case '7': case '8': case '9':
             return Float;
 
-        case '.': case ',': case '(': case ')': case '\'':
+        case '.': case ',': case '(': case ')': case ':': case '!':
             return Operator;
 
         case '-': case '+': {
@@ -50,12 +50,13 @@ Token_Type classify(Parser_State *parser) {
 #endif
 
 cstring operator_strings[Num_Operators] = {
-    [List]   = "List",
-    [Monad]  = "Monad",
-    [Dyad]   = "Dyad",
-    [Assign] = "Assign",
-    [LParen] = "LParen",
-    [RParen] = "RParen",
+    [List]      = "List",
+    [Monad]     = "Monad",
+    [Dyad]      = "Dyad",
+    [Assign]    = "Assign",
+    [Immediate] = "Immediate",
+    [LParen]    = "LParen",
+    [RParen]    = "RParen",
 };
 
 i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
@@ -148,31 +149,29 @@ Token next_token(Parser_State *parser) {
 
         case Operator: {
             result.type = Operator;
-            switch (peek(parser)) {
+            switch (next(parser)) {
                 case ',':
-                    next(parser);
                     result.op = List;
                     break;
                 case '.':
-                    next(parser);
                     result.op = Monad;
                     break;
-                case '\'':
-                    next(parser);
-                    result.op = Dyad;
+                case ':':
+                    if (peek(parser) == ':') {
+                        next(parser);
+                        result.op = Assign;
+                    } else {
+                        result.op = Dyad;
+                    }
+                    break;
+                case '!':
+                    result.op = Immediate;
                     break;
                 case '(':
-                    next(parser);
                     result.op = LParen;
                     break;
                 case ')':
-                    next(parser);
                     result.op = RParen;
-                    break;
-                case ':':
-                    next(parser);
-                    assert(next(parser) == '=');
-                    result.op = Assign;
                     break;
                 default:
                     assert(false);
