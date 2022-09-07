@@ -1,7 +1,7 @@
 WARN  = -Wpedantic -Werror -Wimplicit -Wall -Wno-unused-function
 STD   = -std=c2x
-OPT   = -O3
-LINK  = -lm -L./obj -lstring -lparsing -lformat -lerror
+OPT   = -O0
+LINK  = -lm -Lobj -lparsing -lformat -lerror -lstring
 DEBUG = -ggdb -fsanitize=address
 INPUT = in.txt
 SRC := lib
@@ -16,7 +16,7 @@ test: main $(INPUT)
 	./main $(INPUT)
 
 clean:
-	$(RM) main main.o obj/*
+	$(RM) main obj/*
 
 main: *.c $(LIBS)
 	$(CC) $(DEBUG) -o $@ *.c $(LINK) $(OPT)

@@ -51,6 +51,8 @@ static inline void format_println(cstring fmt, ...) {
     println(result);
 }
 
+void set_format_user_ptr(const void* user_ptr);
+
 i64 fmt_i64_va      (Byte_Slice data, va_list va, Fmt_Info info);
 i64 fmt_u64_va      (Byte_Slice data, va_list va, Fmt_Info info);
 i64 fmt_i32_va      (Byte_Slice data, va_list va, Fmt_Info info);
@@ -60,6 +62,7 @@ i64 fmt_cstr_va     (Byte_Slice data, va_list va, Fmt_Info info);
 i64 fmt_rune_va     (Byte_Slice data, va_list va, Fmt_Info info);
 i64 fmt_error_va    (Byte_Slice dest, va_list va, Fmt_Info info);
 i64 fmt_location_va (Byte_Slice dest, va_list va, Fmt_Info info);
+i64 fmt_ptr_va      (Byte_Slice dest, va_list va, Fmt_Info info);
 
 i64 fmt_i64      (Byte_Slice data, i64      src, Fmt_Info info);
 i64 fmt_u64      (Byte_Slice data, u64      src, Fmt_Info info);
@@ -68,5 +71,6 @@ i64 fmt_cstr     (Byte_Slice data, cstring  src, Fmt_Info info);
 i64 fmt_rune     (Byte_Slice data, rune     src, Fmt_Info info);
 i64 fmt_error    (Byte_Slice dest, Error    src, Fmt_Info info);
 i64 fmt_location (Byte_Slice dest, Location src, Fmt_Info info);
+i64 fmt_ptr      (Byte_Slice dest, uintptr_t src, Fmt_Info info);
 
 #endif

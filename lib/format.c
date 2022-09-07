@@ -15,6 +15,7 @@ Byte_Slice default_format_buffer = {
 
 #define MAX_DIRECTIVES 256
 static Fmt_Directive directives[MAX_DIRECTIVES] = {
+    { "ptr",   fmt_ptr_va      },
     { "i64",   fmt_i64_va      },
     { "u64",   fmt_u64_va      },
     { "i32",   fmt_i32_va      },
@@ -26,6 +27,12 @@ static Fmt_Directive directives[MAX_DIRECTIVES] = {
     { "loc",   fmt_location_va },
 };
 static u64 directives_count = 0;
+
+static const void *global_format_user_ptr;
+
+void set_format_user_ptr(const void* user_ptr) {
+    global_format_user_ptr = user_ptr;
+}
 
 static i32 directive_cmp(const void *a, const void*b) {
     return strncmp(a, b, FORMAT_DIRECTIVE_CHARS);
@@ -134,7 +141,7 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
                         exit(1);
                     }
 
-                    Fmt_Info info = {0};
+                    Fmt_Info info = {.user_ptr = global_format_user_ptr};
                     cursor += fmt_proc( (Byte_Slice){cursor, dest.end}, params, info);
                 }
                 break;
@@ -183,6 +190,21 @@ i64 fmt_i64(Byte_Slice destination, i64 val, Fmt_Info info) {
     return bytes_count;
 }
 
+
+i64 fmt_ptr(Byte_Slice destination, uintptr_t val, Fmt_Info info) {
+    char map[16] = "0123456789ABCDEF";
+    i64 i = 0;
+    for(; i < 16 && destination.begin < destination.end; i++, destination.begin++) {
+        *destination.begin = map[val >> 60];
+        val <<= 4;
+    }
+    return i;
+}
+
+i64 fmt_ptr_va (Byte_Slice destination, va_list va, Fmt_Info info) {
+    uintptr_t src = va_arg(va, uintptr_t);
+    return fmt_ptr(destination, src, info);
+}
 
 i64 fmt_u64(Byte_Slice destination, u64 val, Fmt_Info info) {
     char bytes[32];

@@ -11,6 +11,7 @@ typedef struct {
 
 typedef struct {
     char pad_with;
+    const void *user_ptr;
 } Fmt_Info;
 
 #define FORMAT_DIRECTIVE_CHARS 16
