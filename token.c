@@ -35,20 +35,6 @@ Token_Type classify(Parser_State *parser) {
             return Identifier;
     }
 }
-
-#define CONSOLE_COLORS
-#ifdef CONSOLE_COLORS
-    #define RESET "\x1b[0m"
-    #define COL_RED_F "\x1b[31m"
-    #define COL_GRN_F "\x1b[32m"
-    #define COL_BLU_F "\x1b[34m"
-#else
-    #define RESET ""
-    #define COL_RED_F ""
-    #define COL_GRN_F ""
-    #define COL_BLU_F ""
-#endif
-
 cstring operator_strings[Num_Operators] = {
     [List]      = "List",
     [Monad]     = "Monad",
@@ -59,45 +45,6 @@ cstring operator_strings[Num_Operators] = {
     [RParen]    = "RParen",
 };
 
-i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
-    info = (Fmt_Info){0};
-    Token tok = va_arg(va, Token);
-    char *const begin = dest.begin;
-
-    dest.begin += fmt_location(dest, tok.loc, info);
-    dest.begin += fmt_cstr(dest, ": ", info);
-    dest.begin += fmt_cstr(dest, "Token{ ", info);
-    if (!tok.is_valid) {
-        dest.begin += fmt_cstr(dest, "[" COL_RED_F "INVALID" RESET "] ", info);
-    }
-
-    switch (tok.type) {
-        case Float:
-            dest.begin += fmt_cstr(dest, "f64: " COL_GRN_F, info);
-            dest.begin += fmt_i64(dest, (i64)tok.value, info);
-            dest.begin += fmt_cstr(dest, RESET " ", info);
-            break;
-
-        case Operator:
-            dest.begin += fmt_cstr(dest, "op: " COL_BLU_F, info);
-            dest.begin += fmt_cstr(dest, operator_strings[tok.op], info);
-            dest.begin += fmt_cstr(dest, RESET " ", info);
-            break;
-
-        case Identifier:
-            dest.begin += fmt_cstr(dest, "identifier: " COL_BLU_F "`", info);
-            dest.begin += fmt_str(dest, tok.text, info);
-            dest.begin += fmt_cstr(dest, "`" RESET " ", info);
-            break;
-
-        case Empty:
-            dest.begin += fmt_cstr(dest, "nil ", info);
-            break;
-    }
-
-    dest.begin += fmt_cstr(dest, "}", info);
-    return dest.begin - begin;
-}
 
 static bool    bit_sets_initialized = false;
 static Bit_Set whitespace = {(u64[256 / BITS]){0}};

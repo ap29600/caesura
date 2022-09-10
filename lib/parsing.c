@@ -173,7 +173,7 @@ f64 parse_decimal(Parser_State *parser) {
 void ensure_total_parse(Parser_State *parser, Bit_Set delimiters) {
     if (parser->error == None) {
         rune r = peek(parser);
-        if (!get_bit(delimiters, r)) {
+        if (r != '\0' && !get_bit(delimiters, r)) {
             parser->error = Invalid_Parse;
         }
     }

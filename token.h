@@ -1,3 +1,6 @@
+#ifndef TOKEN_H
+#define TOKEN_H
+
 #include "lib/string_types.h"
 #include "lib/parsing_types.h"
 #include "lib/format_types.h"
@@ -35,6 +38,7 @@ typedef struct {
 } Token;
 
 Token_Type classify(Parser_State *parser);
-i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info);
 Token next_token(Parser_State *parser);
 String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials);
+
+#endif // TOKEN_H

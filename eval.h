@@ -3,12 +3,7 @@
 
 #include "lib/builtin.h"
 #include "lib/format.h"
-
-typedef struct Array_t {
-    u64    rc;
-    u64    shape;
-    double *data;
-} *Array_t;
+#include "array.h"
 
 typedef enum {
     Dyadic,
@@ -34,32 +29,42 @@ typedef enum {
 typedef struct Ast_Node {
     Node_Type type;
     union {
-        Array_t    array;
-        char identifier[16];
-        struct { Node_Handle left, right, callee; } args;
+        Array *array;
+        char   identifier[16];
+        struct {
+            Node_Handle left;
+            Node_Handle right;
+            Node_Handle callee;
+        } args;
     } as;
 } Ast_Node;
 
 struct Eval_Node;
 struct Eval_Context;
 
-typedef struct Eval_Node (*func_t)(struct Eval_Context *ctx, Node_Handle left, Node_Handle right);
+typedef struct Eval_Node (*func_t)(
+    struct Eval_Context *ctx,
+    Node_Handle left,
+    Node_Handle right);
 
 typedef struct Eval_Node {
     Node_Type type;
+    u64 ref_count;
     union {
-        Array_t array;
+        Array *array;
         func_t  function;
         char    identifier[16];
-        struct { Node_Handle left, right, callee; } args;
+        struct {
+            Node_Handle left;
+            Node_Handle right;
+            Node_Handle callee;
+        } args;
     } as;
 } Eval_Node;
 
-
-
-i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info);
-i64 fmt_expression_va(Byte_Slice dest, va_list va, Fmt_Info info);
-Array_t new_array(u64 shape, double *data);
+i64     fmt_expression    (Byte_Slice dest, Ast_Node src, Fmt_Info info);
+i64     fmt_expression_va (Byte_Slice dest, va_list va, Fmt_Info info);
+Array new_array         (u64 shape, double *data);
 
 typedef struct Eval_Context {
     Eval_Node *nodes;
@@ -67,13 +72,14 @@ typedef struct Eval_Context {
     u64 cap;
 } Eval_Context;
 
+void release_node(Eval_Context *ctx, Node_Handle expr);
 
-Node_Handle apply(Eval_Context   *ctx,
-                  const Ast_Node *base,
-                  Node_Handle     expr,
-                  Node_Handle     left,
-                  Node_Handle     right);
+/// compiles into ctx as an expression tree the AST contained in base, starting from expression base[expr]
+/// returns the index of the parent expression;
+Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr);
 
+/// evaluates in place the expression tree contained in ctx, starting from expression expr.
+/// returns the index of the result expression;
 Node_Handle eval(Eval_Context *ctx, Node_Handle expr);
 
 #endif // EVAL_H
