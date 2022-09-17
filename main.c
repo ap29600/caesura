@@ -9,18 +9,25 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "funcs.h"
 #include "parser.h"
 #include "array.h"
 #include "token.h"
 #include "eval.h"
 #include "formats.h"
 
-#define MAX_TOKENS 1024
+void dbg_lookup(Lookup_Scope *scope) {
+    for (i64 i = 0; i < scope->count; i++) {
+        Lookup_Entry entry = scope->entries[i];
+        format_println("{cstr} : {ptr} : {ptr} : {ptr}", &entry.name[0], entry.as_monadic, entry.as_dyadic, entry.value.as.array);
+    }
+}
 
 i32 main () {
     init_formats();
-    char line[1024];
+    init_default_scope();
 
+    char line[1024];
     while (true) {
         format_print("(caesura)> ");
 
@@ -32,9 +39,8 @@ i32 main () {
         Parser_State state = {.source = src, .location.fname = "stdin"};
         Ast ast = parse_expressions(&state);
 
-        Eval_Context ctx = {0};
+        Eval_Context ctx = {.scope = &default_scope};
         Node_Handle expr = apply(&ctx, ast.nodes, ast.parent);
-
         Node_Handle parent = eval(&ctx, expr);
 
         format_println("\t{node}", ctx.nodes[parent]);

@@ -1,11 +1,13 @@
 #include "funcs.h"
 
-static Eval_Node func_right(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
+#include <stdlib.h>
+
+static Eval_Node func_right_identity(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     assert(ctx->nodes[right].type == Node_Array);
     return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(ctx->nodes[right].as.array)};
 }
 
-static Eval_Node func_left(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
+static Eval_Node func_left_identity(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     assert(ctx->nodes[left].type == Node_Array);
     return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(ctx->nodes[left].as.array)};
 }
@@ -46,24 +48,22 @@ static Eval_Node func_minus (Eval_Context *ctx, Node_Handle left, Node_Handle ri
     return (Eval_Node){.type = Node_Array, .as.array = result};
 }
 
-func_t dyadic_functions[] = {
-    func_left,
-    func_plus,
-    func_minus,
-};
+static Eval_Node func_negate (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
+    assert(ctx->nodes[right].type == Node_Array);
+    Array *result = clone_array(ctx->nodes[right].as.array);
 
-u64 dyadic_function_count = 3;
-const char dyadic_function_names[][16] = {
-    "<-",
-    "+",
-    "-",
-};
+    for(i64 i = 0; i < result->shape; i++) {
+        result->data[i] *= -1;
+    }
 
-func_t monadic_functions[] = {
-    func_right,
-};
+    return (Eval_Node){.type = Node_Array, .as.array = result};
+}
 
-u64 monadic_function_count = 1;
-const char monadic_function_names[][16] = {
-    "->",
-};
+void init_default_scope() {
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "->", .as_monadic = func_right_identity, .as_dyadic = NULL               });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "<-", .as_monadic = NULL,                .as_dyadic = func_left_identity });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "+",  .as_monadic = func_right_identity, .as_dyadic = func_plus          });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "-",  .as_monadic = func_negate,         .as_dyadic = func_minus         });
+}
+
+Lookup_Scope default_scope = {0};

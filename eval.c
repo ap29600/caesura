@@ -46,6 +46,12 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
                 dest.begin += fmt_i64(dest, (i64)src.as.array->data[i], info);
             }
             break;
+        case Node_Assign:
+            dest.begin += fmt_rune(dest, '(', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
+            dest.begin += fmt_cstr(dest, ":", info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+            dest.begin += fmt_rune(dest, ')', info);
     }
 
     return dest.begin - begin;
@@ -56,14 +62,30 @@ i64 fmt_expression_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     return fmt_expression(dest, src, info);
 }
 
-static func_t lookup_function(const char name[16], const char (*names)[16], func_t *functions, u64 count) {
-    for(u64 i = 0; i < count; ++i) {
-        if (strncmp(name, names[i], 16) == 0) {
-            return functions[i];
-        }
+i32 entry_cmp (const void* a, const void*b) {
+    const Lookup_Entry *aa = a;
+    const Lookup_Entry *bb = b;
+    return strncmp(aa->name, bb->name, 16);
+}
+
+void scope_insert(Lookup_Scope *scope, Lookup_Entry entry) {
+    if (scope->count + 1 >= scope->cap) {
+        scope->cap = scope->cap ? scope->cap * 2 : 8;
+        scope->entries = realloc(scope->entries, scope->cap * sizeof(Lookup_Entry));
     }
 
-    return NULL;
+    u64 i = scope->count++;
+    for (; i > 0 && entry_cmp(&entry, &scope->entries[i-1]) < 0; i--) {
+        scope->entries[i] = scope->entries[i-1];
+    }
+    scope->entries[i] = entry;
+}
+
+
+Lookup_Entry *scope_lookup(Lookup_Scope *scope, const char name[16]) {
+    Lookup_Entry it = {0};
+    strncpy(it.name, name, 16);
+    return bsearch(&it, scope->entries, scope->count, sizeof(Lookup_Entry), entry_cmp);
 }
 
 static Node_Handle append_node(Eval_Context *ctx, Eval_Node node) {
@@ -101,13 +123,15 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 
             case Node_Identifier: {
 
-                if (left >= 0 && right >= 0) {
-                    // TODO: make this lookup in a scope
-                    func_t func = lookup_function(base[expr].as.identifier,
-                                                  dyadic_function_names,
-                                                  dyadic_functions,
-                                                  dyadic_function_count);
+                Lookup_Entry *entry = scope_lookup(ctx->scope, base[expr].as.identifier);
+                if (!entry) {
+                    format_println("Error: `{cstr}` not found", base[expr].as.identifier);
+                    fflush(stdout);
+                    assert(false && "lookup failed");
+                }
 
+                if (left >= 0 && right >= 0) {
+                    func_t func = entry->as_dyadic;
                     if (func) {
                         Node_Handle func_node = append_node(ctx, (Eval_Node){.type = Node_Function, .as.function = func});
                         ctx->nodes[left     ].ref_count += 1;
@@ -118,12 +142,7 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
                 }
 
                 if (right >= 0) {
-                    // TODO: make this lookup in a scope
-                    func_t func = lookup_function(base[expr].as.identifier,
-                                                  monadic_function_names,
-                                                  monadic_functions,
-                                                  monadic_function_count);
-
+                    func_t func = entry->as_monadic;
                     if (func) {
                         Node_Handle func_node = append_node(ctx, (Eval_Node){.type = Node_Function, .as.function = func});
                         ctx->nodes[func_node].ref_count += 1;
@@ -132,7 +151,10 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
                     }
                 }
 
-                assert(false && "Unresolved symbol");
+                Eval_Node value = entry->value;
+                assert(value.type == Node_Array);
+                entry->value.as.array->ref_count++;
+                return append_node(ctx, value);
             } break;
 
             case Node_Monad: {
@@ -149,6 +171,43 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
                 right = new_right;
                 expr  = base[expr].as.args.callee;
                 continue;
+            }
+
+            case Node_Assign: {
+
+                Node_Handle bind_name  = base[expr].as.args.left;
+                Node_Handle bind_value = base[expr].as.args.right;
+                format_println("register `{cstr}`", base[bind_name].as.identifier);
+
+                Eval_Context new_ctx = {.scope = ctx->scope};
+
+                Node_Handle formal_left_arg = append_node(&new_ctx, (Eval_Node){.type = Node_None});
+                Node_Handle formal_right_arg = append_node(&new_ctx, (Eval_Node){.type = Node_None});
+
+                bind_value = apply_with(&new_ctx, base, bind_value, formal_left_arg, formal_right_arg);
+
+                Lookup_Entry entry = {0};
+                strncpy(entry.name, base[bind_name].as.identifier, 15);
+
+                if ( new_ctx.nodes[formal_left_arg].ref_count == 0
+                  && new_ctx.nodes[formal_right_arg].ref_count == 0 ) {
+                    bind_value = eval(&new_ctx, bind_value);
+
+                    entry.value = new_ctx.nodes[bind_value];
+                    entry.value.as.array->ref_count++;
+
+                    scope_insert(ctx->scope, entry);
+
+                    free(new_ctx.nodes);
+                    return append_node(ctx, entry.value);
+
+                } else {
+                    assert(false);
+                    entry.eval_tree.nodes = realloc(new_ctx.nodes, sizeof(Eval_Node) * new_ctx.count);
+                    entry.eval_tree.count = new_ctx.count;
+
+                    assert(false && "assigning functions is not implemented yet");
+                }
             }
         }
     }
@@ -198,6 +257,10 @@ Node_Handle eval(Eval_Context *ctx, Node_Handle expr) {
             release_node(ctx, func_handle);
             release_node(ctx, right_handle);
             return expr;
+        }
+
+        case Node_Assign: {
+            assert(false && "assign unhandled in application");
         }
     }
 }

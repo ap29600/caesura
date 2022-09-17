@@ -89,6 +89,7 @@ Ast parse_expressions(Parser_State *state) {
     };
 
     bool enlisting = false;
+    Node_Handle binding_name = -1;
 
     for (; !parser_is_empty(state); ) {
         Token tok = next_token(state);
@@ -143,6 +144,15 @@ Ast parse_expressions(Parser_State *state) {
                         expr_state.parens_count--;
                     } break;
 
+                    case Assign: {
+                        assert(expr_state.parens_count == 0); // must be at toplevel
+                        assert(expr_state.active_nodes_count == 1); // must have something to bind to
+                        expr_state.active_nodes_count--;
+                        assert(result.count == 1); // bind to a single variable
+                        assert(result.nodes[0].type == Node_Identifier);
+                        binding_name = 0;
+                    } break;
+
                     default: assert(false && "unhandled operator");
                 } break;
         }
@@ -151,6 +161,16 @@ Ast parse_expressions(Parser_State *state) {
     assert(expr_state.parens_count == 0);
     apply_functions(&expr_state, &result);
     result.parent = expr_state.active_nodes[0];
+
+    if (binding_name >= 0) {
+        result.parent = append_ast_node(&result, (Ast_Node){
+                            .type = Node_Assign,
+                            .as.args = {
+                                .left = binding_name,
+                                .right = expr_state.active_nodes[0],
+                            }
+                        });
+    }
 
     return result;
 }
