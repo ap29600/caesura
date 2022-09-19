@@ -2,7 +2,7 @@
 #define TOKEN_H
 
 #include "lib/string_types.h"
-#include "lib/parsing_types.h"
+#include "lib/scanner_types.h"
 #include "lib/format_types.h"
 #include "lib/bit_set.h"
 
@@ -37,8 +37,8 @@ typedef struct {
     bool is_valid;
 } Token;
 
-Token_Type classify(Parser_State *parser);
-Token next_token(Parser_State *parser);
-String parse_operator(Parser_State *parser, Bit_Set whitespace, Bit_Set specials);
+Token_Type classify(Scanner *scanner);
+Token next_token(Scanner *scanner);
+String parse_operator(Scanner *scanner, Bit_Set whitespace, Bit_Set specials);
 
 #endif // TOKEN_H

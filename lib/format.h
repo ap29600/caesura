@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "format_types.h"
-#include "parsing_types.h"
+#include "scanner_types.h"
 #include "string_types.h"
 
 extern char       default_format_buffer_data[4096];

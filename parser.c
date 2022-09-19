@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "lib/parsing.h"
+#include "lib/scanner.h"
 
 static Node_Handle append_ast_node(Ast *ast, Ast_Node node) {
     if (ast->count >= ast->cap) {
@@ -80,7 +80,7 @@ static void apply_functions(Expression_Parser_State *state, Ast *result) {
     }
 }
 
-Ast parse_expressions(Parser_State *state) {
+Ast parse_expressions(Scanner *state) {
     Ast result = {.nodes = malloc(sizeof(Ast_Node) * 8), .cap = 8, .count = 0};
 
     Expression_Parser_State expr_state = {
@@ -91,7 +91,7 @@ Ast parse_expressions(Parser_State *state) {
     bool enlisting = false;
     Node_Handle binding_name = -1;
 
-    for (; !parser_is_empty(state); ) {
+    for (; !scanner_is_empty(state); ) {
         Token tok = next_token(state);
 
         if (!tok.is_valid) {

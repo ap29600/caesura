@@ -1,6 +1,6 @@
 #include "lib/builtin.h"
 #include "lib/error.h"
-#include "lib/parsing.h"
+#include "lib/scanner.h"
 #include "lib/bit_set.h"
 #include "lib/format.h"
 #include "lib/string.h"
@@ -36,8 +36,8 @@ i32 main () {
         String src = string_from_cstring(line);
         if (empty_string(src)) break;
 
-        Parser_State state = {.source = src, .location.fname = "stdin"};
-        Ast ast = parse_expressions(&state);
+        Scanner scanner = {.source = src, .location.fname = "stdin"};
+        Ast ast = parse_expressions(&scanner);
 
         Eval_Context ctx = {.scope = &default_scope};
         Node_Handle expr = apply(&ctx, ast.nodes, ast.parent);

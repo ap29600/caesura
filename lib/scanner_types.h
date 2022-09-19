@@ -1,5 +1,5 @@
-#ifndef FZR_PARSING_TYPES
-#define FZR_PARSING_TYPES
+#ifndef FZR_SCANNER_TYPES
+#define FZR_SCANNER_TYPES
 
 #include "builtin.h"
 #include "string_types.h"
@@ -16,6 +16,6 @@ typedef struct {
     String   source;
     Location location;
     Error    error;
-} Parser_State;
+} Scanner;
 
 #endif

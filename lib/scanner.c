@@ -1,4 +1,4 @@
-#include "parsing.h"
+#include "scanner.h"
 #include "format.h"
 #include "string.h"
 
@@ -15,24 +15,24 @@
     #define COL_BLU_F ""
 #endif
 
-void report_state(Parser_State *parser, FILE *stream) {
-    const char *begin = parser->source.begin;
-    const char *end   = parser->source.end;
+void report_state(Scanner *scanner, FILE *stream) {
+    const char *begin = scanner->source.begin;
+    const char *end   = scanner->source.end;
 
-    const char *line_begin = begin + parsed_bytes(parser);
-    const char *line_end   = begin + parsed_bytes(parser);
+    const char *line_begin = begin + scanned_bytes(scanner);
+    const char *line_end   = begin + scanned_bytes(scanner);
 
     // delimit the line;
     while(line_begin > begin && *(line_begin-1) != '\n') line_begin--;
     while(line_end   < end   && *line_end       != '\n') line_end++;
 
-    String before_err = {line_begin, begin + parsed_bytes(parser)};
-    String after_err = {begin + parsed_bytes(parser), line_end};
+    String before_err = {line_begin, begin + scanned_bytes(scanner)};
+    String after_err = {begin + scanned_bytes(scanner), line_end};
 
-    format_println("{loc}: [ERROR `" COL_RED_F "{error}" RESET "`]", parser->location, parser->error);
+    format_println("{loc}: [ERROR `" COL_RED_F "{error}" RESET "`]", scanner->location, scanner->error);
     format_println(COL_BLU_F "{str}" COL_RED_F "{str}" RESET, before_err, after_err);
 
-    u64 col = parser->location.col;
+    u64 col = scanner->location.col;
     while (col--) { putchar(' '); }
     puts("^\n");
 }
@@ -56,64 +56,64 @@ static f64 pow_(f64 base, i32 expt) {
 }
 
 
-i32 parse_sign(Parser_State *parser) {
-    switch(peek(parser)) {
-        case '+': next(parser); parser->error = None;          return  1;
-        case '-': next(parser); parser->error = None;          return -1;
-        default:                parser->error = Empty_Parse;   return  1;
+i32 parse_sign(Scanner *scanner) {
+    switch(peek(scanner)) {
+        case '+': next(scanner); scanner->error = None;          return  1;
+        case '-': next(scanner); scanner->error = None;          return -1;
+        default:                scanner->error = Empty_Parse;   return  1;
     }
 }
 
 #define NaN (0.0/0.0);
-f64 parse_f64(Parser_State *parser) {
-    f64 sign = (f64)parse_sign(parser);
-    bool has_sign = parser->error == None;
+f64 read_f64(Scanner *scanner) {
+    f64 sign = (f64)parse_sign(scanner);
+    bool has_sign = scanner->error == None;
 
-    f64 integral = (f64)parse_u64(parser);
-    bool has_digits = parser->error == None;
+    f64 integral = (f64)read_u64(scanner);
+    bool has_digits = scanner->error == None;
 
     f64 decimal = 0.0;
     bool has_dot = false;
-    if (peek(parser) == '.') {
+    if (peek(scanner) == '.') {
         has_dot = true;
-        next(parser);
-        decimal = parse_decimal(parser);
-        has_digits |= parser->error == None;
+        next(scanner);
+        decimal = read_decimal(scanner);
+        has_digits |= scanner->error == None;
     }
 
     if (!has_digits) {
-        parser->error = (has_sign || has_dot) ? Invalid_Parse : Empty_Parse;
+        scanner->error = (has_sign || has_dot) ? Invalid_Parse : Empty_Parse;
         return NaN;
     }
 
     i32 expt = 0;
-    if (peek(parser) == 'e') {
-        next(parser);
-        expt = parse_sign(parser);
+    if (peek(scanner) == 'e') {
+        next(scanner);
+        expt = parse_sign(scanner);
         // ignore errors, sign is optional and default is +.
 
-        expt *= (i32)parse_u64(parser);
+        expt *= (i32)read_u64(scanner);
         // exponent is present but not valid
-        if (parser->error != None) {
-            parser->error = Invalid_Exponent;
+        if (scanner->error != None) {
+            scanner->error = Invalid_Exponent;
             return NaN;
         }
     }
 
     bool is_f64_precision = true;
-    switch(peek(parser)) {
+    switch(peek(scanner)) {
         case 'f':
-            next(parser);
+            next(scanner);
             is_f64_precision = false;
             break;
         case 'd':
-            next(parser);
+            next(scanner);
             is_f64_precision = true;
             break;
         default:;
     }
 
-    parser->error = None;
+    scanner->error = None;
     f64 result = sign * (integral + decimal) * pow_(10.0, expt);
     result = is_f64_precision ? result : (f64)(f32)result;
 
@@ -122,17 +122,17 @@ f64 parse_f64(Parser_State *parser) {
 
 /// given the string "1'234" returns 1234UL.
 /// the empty string "" returns 0UL.
-u64 parse_u64(Parser_State *parser) {
-    rune c = peek(parser);
+u64 read_u64(Scanner *scanner) {
+    rune c = peek(scanner);
     if (c < '0' || '9' < c) {
-        parser->error = Empty_Parse;
+        scanner->error = Empty_Parse;
         return 0;
     }
 
     // first element is a valid digit, from now on every parse is valid
-    parser->error = None;
+    scanner->error = None;
     u64 result = 0;
-    for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
+    for (rune c; (c = peek(scanner)) != '\0'; next(scanner)) {
         if ('0' <= c && c <= '9') {
             result = 10UL * result + (c - '0');
         } else if ( c == '\'' || c == '_') {
@@ -147,18 +147,18 @@ u64 parse_u64(Parser_State *parser) {
 
 /// given the string "123'4", returns 0.1234d.
 /// the empty string ""       returns 0.0d.
-f64 parse_decimal(Parser_State *parser) {
-    rune c = peek(parser);
+f64 read_decimal(Scanner *scanner) {
+    rune c = peek(scanner);
     if (c < '0' || '9' < c) {
-        parser->error = Empty_Parse;
+        scanner->error = Empty_Parse;
         return 0;
     }
 
     // first element is a valid digit, from now on every parse is valid
-    parser->error = None;
+    scanner->error = None;
     f64 result = 0;
     f64 unit   = 1.0;
-    for (rune c; (c = peek(parser)) != '\0'; next(parser)) {
+    for (rune c; (c = peek(scanner)) != '\0'; next(scanner)) {
         if ('0' <= c && c <= '9') {
             result += (unit /= 10UL) * (c - '0');
         } else if ( c == '\'' || c == '_') {
@@ -170,32 +170,30 @@ f64 parse_decimal(Parser_State *parser) {
     return result;
 }
 
-void ensure_total_parse(Parser_State *parser, Bit_Set delimiters) {
-    if (parser->error == None) {
-        rune r = peek(parser);
+void ensure_total_read(Scanner *scanner, Bit_Set delimiters) {
+    if (scanner->error == None) {
+        rune r = peek(scanner);
         if (r != '\0' && !get_bit(delimiters, r)) {
-            parser->error = Invalid_Parse;
+            scanner->error = Invalid_Parse;
         }
     }
 }
 
-Parser_State parser_from_filename(const char *filename) {
-    if (!filename) {
-        println(string_from_cstring("[ERROR]: no filename was provided"));
-        return (Parser_State){0};
-    }
+Scanner scanner_from_filename(const char *filename) {
+    assert(filename);
 
     FILE *file = fopen(filename, "rb");
     if (!file) {
         format_println("[ERROR]: unable to open file `{cstr}`", filename);
-        return (Parser_State){0};
+        return (Scanner){0};
     }
 
-    Parser_State result = {
+    Scanner result = {
         .source = string_from_stream(file),
         .location = {.fname = filename},
         .error = None,
     };
+
     fclose(file);
     return result;
 }

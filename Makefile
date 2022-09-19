@@ -1,16 +1,19 @@
-WARN  = -Wpedantic -Werror -Wimplicit -Wall -Wno-unused-function
-STD   = -std=c2x
-OPT   = -O0
-LINK  = -lm -Lobj -lparsing -lformat -lerror -lstring
-DEBUG = -ggdb -fsanitize=address
-INPUT = in.txt
-SRC := lib
+LIB := lib
 OBJ := obj
-SOURCES := $(wildcard $(SRC)/*.c)
-OBJECTS := $(patsubst $(SRC)/%.c, $(OBJ)/lib%.o, $(SOURCES))
-LIBS    := $(patsubst $(SRC)/%.c, $(OBJ)/lib%.a, $(SOURCES))
 
-default: main
+LIB_SOURCES  := $(wildcard $(LIB)/*.c)
+LIB_OBJECTS  := $(patsubst $(LIB)/%.c, $(OBJ)/%.o,    $(LIB_SOURCES))
+LIB_ARCHIVES := $(patsubst $(LIB)/%.c, $(OBJ)/lib%.a, $(LIB_SOURCES))
+LIB_NAMES    := $(patsubst $(LIB)/%.c, -l%,           $(LIB_SOURCES))
+
+WARN  := -Wpedantic -Werror -Wimplicit -Wall -Wno-unused-function
+STD   := -std=c2x
+OPT   := -O2
+DEBUG := -ggdb -fsanitize=address
+INPUT := in.txt
+LINK  := -lm -L$(OBJ) -Wl,--start-group $(LIB_NAMES) -Wl,--end-group
+
+all: main
 
 test: main $(INPUT)
 	./main $(INPUT)
@@ -18,12 +21,12 @@ test: main $(INPUT)
 clean:
 	$(RM) main obj/*
 
-main: *.c $(LIBS)
+main: *.c $(LIB_ARCHIVES)
 	$(CC) $(DEBUG) -o $@ *.c $(LINK) $(OPT)
 
-$(OBJ)/%.a: $(OBJ)/%.o
+$(OBJ)/lib%.a: $(OBJ)/%.o
 	ar rcs $@ $<
 	ranlib $@
 
-$(OBJ)/lib%.o: $(SRC)/%.c $(SRC)/*.h
-	$(CC) -I$(SRC): -c $< -o $@ $(OPT) $(DEBUG) $(WARN) $(STD)
+$(OBJ)/%.o: $(LIB)/%.c $(LIB)/*.h
+	$(CC) -c $< -o $@ $(OPT) $(DEBUG) $(WARN) $(STD)

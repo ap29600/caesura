@@ -1,4 +1,4 @@
-#include "lib/parsing.h"
+#include "lib/scanner.h"
 #include "lib/format.h"
 #include "lib/string.h"
 #include "lib/bit_set.h"
@@ -6,8 +6,8 @@
 #include "token.h"
 
 
-Token_Type classify(Parser_State *parser) {
-    switch(peek(parser)) {
+Token_Type classify(Scanner *scanner) {
+    switch(peek(scanner)) {
         case '\0':
             return Empty;
 
@@ -19,7 +19,7 @@ Token_Type classify(Parser_State *parser) {
             return Operator;
 
         case '-': case '+': {
-            Parser_State tmp = *parser;
+            Scanner tmp = *scanner;
             next(&tmp);
             switch(peek(&tmp)) {
                 case '0': case '1': case '2': case '3': case '4':
@@ -62,17 +62,17 @@ static void initialize_bit_sets() {
     delimiters = bit_set_from_runes(delimiters.data, DELIMITERS);
 }
 
-Token next_token(Parser_State *parser) {
+Token next_token(Scanner *scanner) {
     if (!bit_sets_initialized)
         initialize_bit_sets();
 
     Token result = {0};
 
-    while(get_bit(whitespace, peek(parser))) next(parser);
-    result.loc = parser->location;
+    while(get_bit(whitespace, peek(scanner))) next(scanner);
+    result.loc = scanner->location;
     result.is_valid = true;
 
-    switch (classify(parser)) {
+    switch (classify(scanner)) {
 
         case Empty: {
             result.type = Empty;
@@ -81,22 +81,22 @@ Token next_token(Parser_State *parser) {
 
         case Float: {
             result.type = Float;
-            result.value = parse_f64(parser);
-            ensure_total_parse(parser, delimiters);
+            result.value = read_f64(scanner);
+            ensure_total_read(scanner, delimiters);
 
-            if (parser->error != None) {
-                while(peek(parser) && !get_bit(delimiters, peek(parser))) next(parser);
+            if (scanner->error != None) {
+                while(peek(scanner) && !get_bit(delimiters, peek(scanner))) next(scanner);
                 result.is_valid = false;
                 result.text = (String){
-                    .begin = &parser->source.begin[result.loc.byte],
-                    .end =   &parser->source.begin[parser->location.byte]
+                    .begin = &scanner->source.begin[result.loc.byte],
+                    .end =   &scanner->source.begin[scanner->location.byte]
                 };
             }
         } break;
 
         case Operator: {
             result.type = Operator;
-            switch (next(parser)) {
+            switch (next(scanner)) {
                 case ',':
                     result.op = List;
                     break;
@@ -104,8 +104,8 @@ Token next_token(Parser_State *parser) {
                     result.op = Monad;
                     break;
                 case ':':
-                    if (peek(parser) == ':') {
-                        next(parser);
+                    if (peek(scanner) == ':') {
+                        next(scanner);
                         result.op = Assign;
                     } else {
                         result.op = Dyad;
@@ -128,13 +128,12 @@ Token next_token(Parser_State *parser) {
 
         case Identifier: {
             result.type = Identifier;
-            while(peek(parser) != '\0' && !get_bit(delimiters, peek(parser))) next(parser);
+            while(peek(scanner) != '\0' && !get_bit(delimiters, peek(scanner))) next(scanner);
             result.text = (String){
-                .begin = &parser->source.begin[result.loc.byte],
-                .end =   &parser->source.begin[parser->location.byte]
+                .begin = &scanner->source.begin[result.loc.byte],
+                .end =   &scanner->source.begin[scanner->location.byte]
             };
         } break;
-
     }
 
     return result;
