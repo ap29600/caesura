@@ -24,10 +24,6 @@ i64 fmt_eval_context_as_dot_va(Byte_Slice dest, va_list va, Fmt_Info info) {
 
 i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
     const char *begin = dest.begin;
-    dest.begin += fmt_rune(dest, '(', info);
-    dest.begin += fmt_u64(dest, src.ref_count, info);
-    dest.begin += fmt_rune(dest, ')', info);
-    dest.begin += fmt_rune(dest, '{', info);
     switch(src.type) {
         case Node_None:
             dest.begin += fmt_cstr(dest, "None", info);
@@ -40,7 +36,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
         case Node_Array:
             for (u64 i = 0; i < src.as.array->shape; ++i) {
                 if (i > 0) dest.begin += fmt_rune(dest, ',', info);
-                dest.begin += fmt_i64(dest, (i64)src.as.array->data[i], info);
+                dest.begin += fmt_f64(dest, src.as.array->data[i], info);
             }
             break;
 
@@ -56,8 +52,9 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
             dest.begin += fmt_cstr(dest, "Func@0x", info);
             dest.begin += fmt_ptr(dest, (uintptr_t)src.as.function, info);
             break;
+        default:
+            assert(false);
     }
-    dest.begin += fmt_rune(dest, '}', info);
     return dest.begin - begin;
 }
 
@@ -107,7 +104,7 @@ i64 fmt_token(Byte_Slice dest, Token tok, Fmt_Info info) {
     switch (tok.type) {
         case Float:
             dest.begin += fmt_cstr(dest, "f64: " COL_GRN_F, info);
-            dest.begin += fmt_i64(dest, (i64)tok.value, info);
+            dest.begin += fmt_f64(dest, tok.value, info);
             dest.begin += fmt_cstr(dest, RESET " ", info);
             break;
 

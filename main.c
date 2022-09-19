@@ -19,7 +19,7 @@
 void dbg_lookup(Lookup_Scope *scope) {
     for (i64 i = 0; i < scope->count; i++) {
         Lookup_Entry entry = scope->entries[i];
-        format_println("{cstr} : {ptr} : {ptr} : {ptr}", &entry.name[0], entry.as_monadic, entry.as_dyadic, entry.value.as.array);
+        format_println("{cstr} : {ptr} : {ptr} : {ptr}", entry.name, entry.as_monadic, entry.as_dyadic, entry.value.as.array);
     }
 }
 

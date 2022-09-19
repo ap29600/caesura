@@ -18,6 +18,8 @@ static Fmt_Directive directives[MAX_DIRECTIVES] = {
     { "ptr",   fmt_ptr_va      },
     { "i64",   fmt_i64_va      },
     { "u64",   fmt_u64_va      },
+    { "f64",   fmt_f64_va      },
+    { "f32",   fmt_f64_va      }, // auto-promotion makes it a f64
     { "i32",   fmt_i32_va      },
     { "u32",   fmt_u32_va      },
     { "str",   fmt_str_va      },
@@ -165,6 +167,32 @@ String format_to_va(Byte_Slice dest, cstring fmt, va_list params) {
     fputs("[ERROR]: format buffer is full, output may be truncated\n", stderr);
     fflush(stderr);
     exit(1);
+}
+
+i64 fmt_f64(Byte_Slice dest, f64 val, Fmt_Info info) {
+    const char *begin = dest.begin;
+    if (val < 0) {
+        dest.begin += fmt_rune(dest,  '-', info);
+        val = -val;
+    }
+
+    u64 integral = (u64)val;
+    dest.begin += fmt_u64(dest, integral, info);
+    u64 decimal = (val - integral) * 1000.0 + 0.5;
+
+    if (decimal) {
+        dest.begin += fmt_rune(dest, '.', info);
+        if (decimal < 100) dest.begin += fmt_rune(dest,  '0', info);
+        if (decimal < 10) dest.begin += fmt_rune(dest,  '0', info);
+        dest.begin += fmt_u64(dest, decimal, info);
+    }
+
+    return dest.begin - begin;
+}
+
+i64 fmt_f64_va(Byte_Slice data, va_list va, Fmt_Info info) {
+    f64 val = va_arg(va, f64);
+    return fmt_f64(data, val, info);
 }
 
 i64 fmt_i64(Byte_Slice destination, i64 val, Fmt_Info info) {
