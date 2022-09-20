@@ -5,3 +5,4 @@
 -Wall
 -Wno-unused-function
 -std=c2x
+-iquote.

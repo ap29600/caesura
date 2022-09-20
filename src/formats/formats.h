@@ -1,7 +1,7 @@
 #include "lib/format.h"
 
-#include "eval.h"
-#include "token.h"
+#include "src/eval/eval.h"
+#include "src/token/token.h"
 
 i64 fmt_eval_node_va (Byte_Slice dest, va_list va, Fmt_Info info);
 i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info);

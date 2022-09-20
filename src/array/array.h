@@ -3,13 +3,12 @@
 
 #include "lib/builtin.h"
 
-struct Array {
+typedef struct Array {
     double *data;
     u64     shape;
     u64     ref_count;
     struct Array *owner;
-};
-typedef struct Array Array;
+} Array;
 
 Array*  make_array(const double* data, u64 shape);
 Array*  clone_array(Array *array);

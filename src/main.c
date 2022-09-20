@@ -9,12 +9,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "funcs.h"
-#include "parser.h"
-#include "array.h"
-#include "token.h"
-#include "eval.h"
-#include "formats.h"
+#include "src/funcs/funcs.h"
+#include "src/parser/parser.h"
+#include "src/array/array.h"
+#include "src/token/token.h"
+#include "src/eval/eval.h"
+#include "src/formats/formats.h"
 
 void dbg_lookup(Lookup_Scope *scope) {
     for (i64 i = 0; i < scope->count; i++) {

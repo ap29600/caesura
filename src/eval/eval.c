@@ -1,9 +1,8 @@
+#include <stdlib.h>
 #include "lib/bit_set.h"
 
 #include "eval.h"
-#include "funcs.h"
-
-#include <stdlib.h>
+#include "src/funcs/funcs.h"
 
 i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
     const Ast_Node *ctx = info.user_ptr;

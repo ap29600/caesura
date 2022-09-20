@@ -1,11 +1,12 @@
-#include "formats.h"
-#include "parser.h"
-#include "token.h"
-
 #include <stdlib.h>
 #include <stdbool.h>
-
 #include "lib/scanner.h"
+
+#include "parser.h"
+
+#include "src/formats/formats.h"
+#include "src/token/token.h"
+
 
 static Node_Handle append_ast_node(Ast *ast, Ast_Node node) {
     if (ast->count >= ast->cap) {
@@ -163,13 +164,14 @@ Ast parse_expressions(Scanner *state) {
     result.parent = expr_state.active_nodes[0];
 
     if (binding_name >= 0) {
-        result.parent = append_ast_node(&result, (Ast_Node){
-                            .type = Node_Assign,
-                            .as.args = {
-                                .left = binding_name,
-                                .right = expr_state.active_nodes[0],
-                            }
-                        });
+        result.parent = append_ast_node(
+                &result, (Ast_Node){
+                    .type = Node_Assign,
+                    .as.args = {
+                        .left = binding_name,
+                        .right = expr_state.active_nodes[0],
+                    }
+                });
     }
 
     return result;

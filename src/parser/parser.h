@@ -2,7 +2,7 @@
 #define PARSER_H
 
 #include "lib/scanner_types.h"
-#include "eval.h"
+#include "src/eval/eval.h"
 
 typedef struct {
     Ast_Node *nodes;
@@ -12,6 +12,5 @@ typedef struct {
 } Ast;
 
 Ast parse_expressions(Scanner *scanner);
-
 
 #endif // PARSER_H

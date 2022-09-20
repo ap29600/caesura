@@ -1,5 +1,9 @@
+SRC := src
 LIB := lib
 OBJ := obj
+
+SRC_SOURCES  := $(shell find $(SRC)/ -type f -name '*.c')
+SRC_HEADERS  := $(shell find $(SRC)/ -type f -name '*.h')
 
 LIB_SOURCES  := $(wildcard $(LIB)/*.c)
 LIB_OBJECTS  := $(patsubst $(LIB)/%.c, $(OBJ)/%.o,    $(LIB_SOURCES))
@@ -8,7 +12,7 @@ LIB_NAMES    := $(patsubst $(LIB)/%.c, -l%,           $(LIB_SOURCES))
 
 WARN  := -Wpedantic -Werror -Wimplicit -Wall -Wno-unused-function
 STD   := -std=c2x
-OPT   := -O2
+OPT   := -O0
 DEBUG := -ggdb -fsanitize=address
 INPUT := in.txt
 LINK  := -lm -L$(OBJ) -Wl,--start-group $(LIB_NAMES) -Wl,--end-group
@@ -21,8 +25,8 @@ test: main $(INPUT)
 clean:
 	$(RM) main obj/*
 
-main: *.c $(LIB_ARCHIVES)
-	$(CC) $(DEBUG) -o $@ *.c $(LINK) $(OPT)
+main: $(SRC_SOURCES) $(SRC_HEADERS) $(LIB_ARCHIVES)
+	$(CC) $(DEBUG) -o $@ -iquote. $(SRC_SOURCES) $(LINK) $(OPT)
 
 $(OBJ)/lib%.a: $(OBJ)/%.o
 	ar rcs $@ $<

@@ -3,7 +3,7 @@
 
 #include "lib/builtin.h"
 #include "lib/format.h"
-#include "array.h"
+#include "src/array/array.h"
 
 typedef enum {
     Dyadic,
