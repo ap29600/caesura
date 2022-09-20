@@ -2,8 +2,8 @@
 #define FZR_SCANNER
 
 #include <stdio.h>
-#include "scanner_types.h"
-#include "bit_set.h"
+#include "types.h"
+#include "../bit_set.h"
 
 f64  read_f64     (Scanner *scanner);
 f64  read_decimal (Scanner *scanner);

@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lib/scanner_types.h"
+#include "lib/scanner/types.h"
 #include "src/eval/eval.h"
 
 typedef struct {

@@ -1,9 +1,9 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-#include "lib/string_types.h"
-#include "lib/scanner_types.h"
-#include "lib/format_types.h"
+#include "lib/string/types.h"
+#include "lib/scanner/types.h"
+#include "lib/format/types.h"
 #include "lib/bit_set.h"
 
 typedef enum {

@@ -1,7 +1,7 @@
 #ifndef FZR_STRING_TYPES
 #define FZR_STRING_TYPES
 
-#include "builtin.h"
+#include "../builtin.h"
 #include <assert.h>
 #include <string.h>
 

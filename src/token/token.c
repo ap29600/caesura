@@ -1,6 +1,6 @@
-#include "lib/scanner.h"
-#include "lib/format.h"
-#include "lib/string.h"
+#include "lib/scanner/scanner.h"
+#include "lib/format/format.h"
+#include "lib/string/string.h"
 #include "lib/bit_set.h"
 
 #include "token.h"

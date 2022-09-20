@@ -2,7 +2,8 @@
 #define EVAL_H
 
 #include "lib/builtin.h"
-#include "lib/format.h"
+#include "lib/format/format.h"
+
 #include "src/array/array.h"
 
 typedef enum {

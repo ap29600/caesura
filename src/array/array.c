@@ -1,5 +1,5 @@
 #include "array.h"
-#include "lib/format.h"
+#include "lib/format/format.h"
 
 #include <stdlib.h>
 #include <string.h>

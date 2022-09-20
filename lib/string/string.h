@@ -1,8 +1,8 @@
 #ifndef FZR_STRING
 #define FZR_STRING
 
-#include "string_types.h"
 #include <stdio.h>
+#include "types.h"
 
 void   delete_str          (String *s);
 String string_from_stream  (FILE *in);

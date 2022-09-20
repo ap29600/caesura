@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "string.h"
-#include "bit_set.h"
+#include "../bit_set.h"
 
 u64 string_index_rune(String s, rune c) {
     // TODO: handle utf-8 decoding
@@ -27,7 +27,7 @@ u64 string_index_any(String s, const rune *c) {
         for (const rune *j = c; *j; j++) {
             // TODO: handle utf-8 decoding
             assert(rune_width(*j) == 1);
-            set_bit(fastmap, *j, true);
+            set_bit(&fastmap, *j, true);
         }
 
         u64 i = 0;
@@ -112,4 +112,3 @@ bool string_eq_string(String a, String b) {
     if (a_len != b_len) return false;
     return memcmp(a.begin, b.begin, a_len) == 0;
 }
-

@@ -1,9 +1,9 @@
 #ifndef FZR_SCANNER_TYPES
 #define FZR_SCANNER_TYPES
 
-#include "builtin.h"
-#include "string_types.h"
-#include "error.h"
+#include "../builtin.h"
+#include "../string/types.h"
+#include "../error/error.h"
 
 typedef struct {
     u32 row;

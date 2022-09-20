@@ -1,9 +1,9 @@
 #include "lib/builtin.h"
-#include "lib/error.h"
-#include "lib/scanner.h"
+#include "lib/error/error.h"
+#include "lib/scanner/scanner.h"
 #include "lib/bit_set.h"
-#include "lib/format.h"
-#include "lib/string.h"
+#include "lib/format/format.h"
+#include "lib/string/string.h"
 
 #include <assert.h>
 #include <stdarg.h>

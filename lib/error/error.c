@@ -1,4 +1,4 @@
-#include "builtin.h"
+#include "../builtin.h"
 #include "error.h"
 
 cstring runtime_error_strings[Num_Errors] = {
