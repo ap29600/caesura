@@ -1,6 +1,6 @@
-#include "scanner.h"
-#include "../format/format.h"
-#include "../string/string.h"
+#include "module.h"
+#include "../format/module.h"
+#include "../string/module.h"
 
 #define CONSOLE_COLORS
 #ifdef CONSOLE_COLORS

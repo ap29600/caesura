@@ -1,5 +1,5 @@
 #include "../builtin.h"
-#include "error.h"
+#include "module.h"
 
 cstring runtime_error_strings[Num_Errors] = {
     [None]              = "None",

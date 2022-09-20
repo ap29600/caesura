@@ -2,7 +2,7 @@
 #define EVAL_H
 
 #include "lib/builtin.h"
-#include "lib/format/format.h"
+#include "lib/format/module.h"
 
 #include "src/array/array.h"
 

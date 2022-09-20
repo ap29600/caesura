@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
-#include "lib/scanner/scanner.h"
+#include "lib/scanner/module.h"
 
 #include "parser.h"
 

@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "string.h"
+#include "module.h"
+
 #include "../bit_set.h"
 
 u64 string_index_rune(String s, rune c) {

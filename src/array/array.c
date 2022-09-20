@@ -1,8 +1,8 @@
-#include "array.h"
-#include "lib/format/format.h"
-
 #include <stdlib.h>
 #include <string.h>
+#include "lib/format/module.h"
+
+#include "array.h"
 
 Array*  make_array(const double* data, u64 shape) {
     Array *result = malloc(sizeof(Array) + sizeof(double) * shape);

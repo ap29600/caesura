@@ -1,27 +1,15 @@
-#include "lib/builtin.h"
-#include "lib/error/error.h"
-#include "lib/scanner/scanner.h"
-#include "lib/bit_set.h"
-#include "lib/format/format.h"
-#include "lib/string/string.h"
-
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "lib/builtin.h"
+#include "lib/scanner/module.h"
+#include "lib/format/module.h"
+#include "lib/string/module.h"
+
 #include "src/funcs/funcs.h"
 #include "src/parser/parser.h"
-#include "src/array/array.h"
-#include "src/token/token.h"
-#include "src/eval/eval.h"
 #include "src/formats/formats.h"
-
-void dbg_lookup(Lookup_Scope *scope) {
-    for (i64 i = 0; i < scope->count; i++) {
-        Lookup_Entry entry = scope->entries[i];
-        format_println("{cstr} : {ptr} : {ptr} : {ptr}", entry.name, entry.as_monadic, entry.as_dyadic, entry.value.as.array);
-    }
-}
 
 i32 main () {
     init_formats();

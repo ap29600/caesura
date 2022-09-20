@@ -3,9 +3,10 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "string.h"
-#include "format.h"
-#include "error.h"
+#include "module.h"
+
+#include "../string/module.h"
+#include "../error/module.h"
 
 char default_format_buffer_data[4096];
 Byte_Slice default_format_buffer = {

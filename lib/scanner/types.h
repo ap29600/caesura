@@ -3,7 +3,7 @@
 
 #include "../builtin.h"
 #include "../string/types.h"
-#include "../error/error.h"
+#include "../error/module.h"
 
 typedef struct {
     u32 row;
