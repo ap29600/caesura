@@ -105,7 +105,7 @@ Ast parse_expressions(Scanner *state) {
             assert(has_active_locals(&expr_state, 1));
             Ast_Node *node = &result.nodes[last_active_local(&expr_state)];
             assert(node->type == Node_Array);
-            node->as.array = array_append_elem(node->as.array, tok.value);
+            node->as.array = array_append_elem(&tok.value, node->as.array, Type_Float);
             enlisting = false;
             continue;
         }
@@ -118,7 +118,7 @@ Ast parse_expressions(Scanner *state) {
                 expr_state.active_nodes[expr_state.active_nodes_count++] = append_ast_node(
                         &result, (Ast_Node){
                             .type = Node_Array,
-                            .as.array = make_array(&tok.value, 1),
+                            .as.array = make_array(&tok.value, 1, Type_Float),
                         });
                 break;
 

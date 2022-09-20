@@ -4,58 +4,6 @@
 #include "eval.h"
 #include "src/funcs/funcs.h"
 
-i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
-    const Ast_Node *ctx = info.user_ptr;
-    const char *begin = dest.begin;
-    switch (src.type) {
-        case Node_None:
-            dest.begin += fmt_cstr(dest, "<No_Expression>", info);
-            break;
-
-        case Node_Monad:
-            dest.begin += fmt_rune(dest, '(', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
-            dest.begin += fmt_rune(dest, ' ', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
-            dest.begin += fmt_rune(dest, ')', info);
-            break;
-
-        case Node_Dyad:
-            dest.begin += fmt_rune(dest, '(', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
-            dest.begin += fmt_rune(dest, ' ', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
-            dest.begin += fmt_rune(dest, ' ', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
-            dest.begin += fmt_rune(dest, ')', info);
-            break;
-
-        case Node_Function:
-            assert(false);
-
-        case Node_Identifier:
-            dest.begin += fmt_cstr(dest, src.as.identifier, info);
-            break;
-
-        case Node_Array:
-            for (u64 i = 0; i < src.as.array->shape; ++i) {
-                if (i > 0) {
-                    dest.begin += fmt_rune(dest, ',', info);
-                }
-                dest.begin += fmt_i64(dest, (i64)src.as.array->data[i], info);
-            }
-            break;
-        case Node_Assign:
-            dest.begin += fmt_rune(dest, '(', info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
-            dest.begin += fmt_cstr(dest, ":", info);
-            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
-            dest.begin += fmt_rune(dest, ')', info);
-    }
-
-    return dest.begin - begin;
-}
-
 i64 fmt_expression_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     Ast_Node src = va_arg(va, Ast_Node);
     return fmt_expression(dest, src, info);

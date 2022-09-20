@@ -34,9 +34,45 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
             break;
 
         case Node_Array:
-            for (u64 i = 0; i < src.as.array->shape; ++i) {
-                if (i > 0) dest.begin += fmt_rune(dest, ',', info);
-                dest.begin += fmt_f64(dest, src.as.array->data[i], info);
+            switch(src.as.array->type) {
+                case Type_Float: {
+                    f64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_f64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_Int: {
+                    i64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_i64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_UInt: {
+                    u64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_u64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_Char: {
+                    String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
+                    dest.begin += fmt_rune(dest, '"', info);
+                    dest.begin += fmt_str(dest, data, info);
+                    dest.begin += fmt_rune(dest, '"', info);
+                } break;
+
+                case Type_Bool: {
+                    bool *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_rune(dest, "01"[data[i]], info);
+                    }
+                } break;
             }
             break;
 
@@ -132,6 +168,92 @@ i64 fmt_token(Byte_Slice dest, Token tok, Fmt_Info info) {
 i64 fmt_token_va(Byte_Slice dest, va_list va, Fmt_Info info) {
     Token tok = va_arg(va, Token);
     return fmt_token(dest, tok, info);
+}
+
+i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
+    const Ast_Node *ctx = info.user_ptr;
+    const char *begin = dest.begin;
+    switch (src.type) {
+        case Node_None:
+            dest.begin += fmt_cstr(dest, "<No_Expression>", info);
+            break;
+
+        case Node_Monad:
+            dest.begin += fmt_rune(dest, '(', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+            dest.begin += fmt_rune(dest, ' ', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
+            dest.begin += fmt_rune(dest, ')', info);
+            break;
+
+        case Node_Dyad:
+            dest.begin += fmt_rune(dest, '(', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
+            dest.begin += fmt_rune(dest, ' ', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+            dest.begin += fmt_rune(dest, ' ', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
+            dest.begin += fmt_rune(dest, ')', info);
+            break;
+
+        case Node_Function:
+            assert(false);
+
+        case Node_Identifier:
+            dest.begin += fmt_cstr(dest, src.as.identifier, info);
+            break;
+
+        case Node_Array:
+            switch(src.as.array->type) {
+                case Type_Float: {
+                    f64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_f64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_Int: {
+                    i64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_i64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_UInt: {
+                    u64 *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_u64(dest, data[i], info);
+                    }
+                } break;
+
+                case Type_Char: {
+                    String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
+                    dest.begin += fmt_rune(dest, '"', info);
+                    dest.begin += fmt_str(dest, data, info);
+                    dest.begin += fmt_rune(dest, '"', info);
+                } break;
+
+                case Type_Bool: {
+                    bool *data = src.as.array->data;
+                    for (u64 i = 0; i < src.as.array->shape; ++i) {
+                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
+                        dest.begin += fmt_rune(dest, "01"[data[i]], info);
+                    }
+                } break;
+            }
+            break;
+        case Node_Assign:
+            dest.begin += fmt_rune(dest, '(', info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
+            dest.begin += fmt_cstr(dest, ":", info);
+            dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+            dest.begin += fmt_rune(dest, ')', info);
+    }
+
+    return dest.begin - begin;
 }
 
 void init_formats(void) {

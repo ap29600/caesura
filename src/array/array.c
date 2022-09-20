@@ -4,27 +4,39 @@
 
 #include "array.h"
 
-Array*  make_array(const double* data, u64 shape) {
-    Array *result = malloc(sizeof(Array) + sizeof(double) * shape);
-    result->data = (double*)(((u8*)result) + sizeof(Array));
-    result->owner = NULL;
-    result->ref_count = 1;
-    result->shape = shape;
+const static u64 sizes[] = {
+    [Type_Float] = sizeof(f64),
+    [Type_Char]  = sizeof(char),
+    [Type_Int]   = sizeof(i64),
+    [Type_UInt]  = sizeof(u64),
+    [Type_Bool]  = sizeof(bool),
+};
 
-    if (data) memcpy(result->data, data, shape * sizeof(double));
-    else      memset(result->data, 0,    shape * sizeof(double));
+Array* make_array(const void* data, u64 shape, Element_Type type) {
+    Array *result = malloc(sizeof(Array) + sizes[type] * shape);
+
+    *result = (Array){
+        .data = ((u8*)result) + sizeof(Array),
+        .ref_count = 1,
+        .type = type,
+        .shape = shape,
+    };
+
+    if (data) memcpy(result->data, data, shape * sizes[type]);
+    else      memset(result->data, 0,    shape * sizes[type]);
 
     return result;
 }
 
 Array *borrow_array(Array *array) {
+    assert(array);
     array->ref_count += 1;
     return array;
 }
 
 void release_array(Array *array) {
+    assert(array);
     if (array->ref_count == 1) {
-        if (array->owner) release_array(array->owner);
         free(array);
     } else {
         array->ref_count -= 1;
@@ -32,19 +44,18 @@ void release_array(Array *array) {
 }
 
 Array *clone_array(Array *array) {
-    return make_array(array->data, array->shape);
+    assert(array);
+    return make_array(array->data, array->shape, array->type);
 }
 
-Array* array_append_elem(Array *array, double elem) {
-    if (array->ref_count == 1) {
-        array = realloc(array, sizeof(Array) + sizeof(double) * (array->shape + 1));
-        array->data = (double*)((uintptr_t)array + sizeof(Array));
-        array->data[array->shape++] = elem;
-        return array;
-    } else {
-        Array *copy = make_array(NULL, array->shape + 1);
-        memcpy(copy->data, array->data, array->shape * sizeof(double));
-        copy->data[copy->shape-1] = elem;
-        return copy;
-    }
+Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
+    assert(array);
+    assert(array->type == type && "type mismatch");
+    assert(array->ref_count == 1 && "permission to modify");
+    assert((u8*)array->data == ((u8*)array + sizeof(Array)) && "single allocation");
+
+    array = realloc(array, sizeof(Array) + (array->shape+1) * sizes[type]);
+    array->data = ((u8*)array) + sizeof(Array);
+    memcpy(((u8*)array->data) + array->shape * sizes[type], elem, sizes[type]);
+    return array;
 }
