@@ -16,6 +16,14 @@ DEBUG := -ggdb -fsanitize=address
 INPUT := in.txt
 LINK  := -lm -L$(OBJ) -Wl,--start-group $(addprefix -l, $(LIB_MODULES)) -Wl,--end-group
 
+define objects_of =
+	$(shell sh -c "find lib/$(1) -type f -name '*.c' | sed 's/lib\/$(1)\//obj\/$(1)_/g; s/\.c/\.o/g'")
+endef
+
+define source_of =
+	$(shell sh -c "echo $(1) | sed 's/_/\//; s/obj\//lib\//g; s/\.o/\.c/g'")
+endef
+
 all: main
 
 test: main $(INPUT)
@@ -27,9 +35,18 @@ clean:
 main: $(SRC_MODULES) $(SRC_HEADERS) $(LIB_ARCHIVES)
 	$(CC) $(DEBUG) -o $@ -iquote. $(SRC_MODULES) $(LINK) $(OPT)
 
-$(OBJ)/lib%.a: $(OBJ)/%.o
-	ar rcs $@ $<
-	ranlib $@
+define generate_archive =
+ LIB_OBJECTS += $(call objects_of,$(1))
+ $(OBJ)/lib$(1).a: $(call objects_of,$(1))
+	ar rcs $$@ $$^
+	ranlib $$@
+endef
 
-$(OBJ)/%.o: $(LIB)/%/*.c $(LIB_HEADERS)
-	$(CC) -c $< -o $@ $(OPT) $(DEBUG) $(WARN) $(STD)
+$(foreach arch,$(LIB_MODULES),$(eval $(call generate_archive,$(arch))))
+
+define generate_object =
+$(1): $(call source_of,$(1)) $$(LIB_HEADERS)
+	$$(CC) -c $$< -o $$@ $$(OPT) $$(DEBUG) $$(WARN) $$(STD)
+endef
+
+$(foreach obj,$(LIB_OBJECTS),$(eval $(call generate_object,$(obj))))

@@ -53,18 +53,6 @@ static inline void format_println(cstring fmt, ...) {
 
 void set_format_user_ptr(const void* user_ptr);
 
-i64 fmt_i64_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_u64_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_f64_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_i32_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_u32_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_str_va      [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_cstr_va     [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_rune_va     [[nodiscard]] (Byte_Slice data, va_list va, Fmt_Info info);
-i64 fmt_error_va    [[nodiscard]] (Byte_Slice dest, va_list va, Fmt_Info info);
-i64 fmt_location_va [[nodiscard]] (Byte_Slice dest, va_list va, Fmt_Info info);
-i64 fmt_ptr_va      [[nodiscard]] (Byte_Slice dest, va_list va, Fmt_Info info);
-
 i64 fmt_i64      [[nodiscard]] (Byte_Slice data, i64      src, Fmt_Info info);
 i64 fmt_u64      [[nodiscard]] (Byte_Slice data, u64      src, Fmt_Info info);
 i64 fmt_f64      [[nodiscard]] (Byte_Slice data, f64      src, Fmt_Info info);
