@@ -16,4 +16,8 @@ Eval_Node func_negate     (Eval_Context *ctx, Node_Handle left, Node_Handle righ
 Eval_Node func_complement (Eval_Context *ctx, Node_Handle left, Node_Handle right);
 Eval_Node func_square_root(Eval_Context *ctx, Node_Handle left, Node_Handle right);
 
+Eval_Node func_filter     (Eval_Context *ctx, Node_Handle left, Node_Handle right);
+Eval_Node func_shape      (Eval_Context *ctx, Node_Handle left, Node_Handle right);
+Eval_Node func_reshape    (Eval_Context *ctx, Node_Handle left, Node_Handle right);
+
 #endif // FUNCS_H
