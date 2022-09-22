@@ -51,14 +51,6 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
                     }
                 } break;
 
-                case Type_UInt: {
-                    u64 *data = src.as.array->data;
-                    for (u64 i = 0; i < src.as.array->shape; ++i) {
-                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
-                        dest.begin += fmt_u64(dest, data[i], info);
-                    }
-                } break;
-
                 case Type_Char: {
                     String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
                     dest.begin += fmt_rune(dest, '"', info);
@@ -73,6 +65,8 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
                         dest.begin += fmt_rune(dest, "01"[data[i]], info);
                     }
                 } break;
+
+                case Types_Count: assert(false);
             }
             break;
 
@@ -221,14 +215,6 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
                     }
                 } break;
 
-                case Type_UInt: {
-                    u64 *data = src.as.array->data;
-                    for (u64 i = 0; i < src.as.array->shape; ++i) {
-                        if (i > 0) dest.begin += fmt_rune(dest, ',', info);
-                        dest.begin += fmt_u64(dest, data[i], info);
-                    }
-                } break;
-
                 case Type_Char: {
                     String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
                     dest.begin += fmt_rune(dest, '"', info);
@@ -243,6 +229,8 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
                         dest.begin += fmt_rune(dest, "01"[data[i]], info);
                     }
                 } break;
+                
+                case Types_Count: assert(false);
             }
             break;
         case Node_Assign:

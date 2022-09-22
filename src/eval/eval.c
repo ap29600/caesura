@@ -170,6 +170,7 @@ Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr) {
 Node_Handle eval(Eval_Context *ctx, Node_Handle expr) {
     switch(ctx->nodes[expr].type) {
         case Node_None:
+            assert(false);
 
         case Node_Array:
             return expr;
@@ -209,5 +210,7 @@ Node_Handle eval(Eval_Context *ctx, Node_Handle expr) {
         case Node_Assign: {
             assert(false && "assign unhandled in application");
         }
+
+        default: assert(false);
     }
 }

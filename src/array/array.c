@@ -8,7 +8,6 @@ const static u64 sizes[] = {
     [Type_Float] = sizeof(f64),
     [Type_Char]  = sizeof(char),
     [Type_Int]   = sizeof(i64),
-    [Type_UInt]  = sizeof(u64),
     [Type_Bool]  = sizeof(bool),
 };
 
@@ -45,7 +44,9 @@ void release_array(Array *array) {
 
 Array *clone_array(Array *array) {
     assert(array);
-    return make_array(array->data, array->shape, array->type);
+    Array *result = make_array(array->data, array->shape, array->type);
+    release_array(array);
+    return result;
 }
 
 Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
@@ -59,4 +60,57 @@ Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
     memcpy(((u8*)array->data) + array->shape * sizes[type], elem, sizes[type]);
     array->shape += 1;
     return array;
+}
+
+Array*  array_cast(Array *array, Element_Type type) {
+    if (array->type == type) {
+        return array;
+    } else {
+        Array *result = make_array(NULL, array->shape, type);
+
+        #define CAST_ALL(dest, dest_t, arr, arr_t) \
+            for(int i = 0; i < dest->shape; ++i) \
+                ((dest_t*)dest->data)[i] = ((arr_t*)arr->data)[i]
+
+        switch (array->type) {
+            case Type_Bool:
+                switch(type) {
+                    case Type_Bool:   assert(false);
+                    case Type_Char:   CAST_ALL(result, char, array, bool); break;
+                    case Type_Int:    CAST_ALL(result, i64,  array, bool); break;
+                    case Type_Float:  CAST_ALL(result, f64,  array, bool); break;
+                    case Types_Count: assert(false);
+                } break;
+            case Type_Char:
+                switch(type) {
+                    case Type_Bool:   CAST_ALL(result, bool, array, char); break;
+                    case Type_Char:   assert(false);
+                    case Type_Int:    CAST_ALL(result, i64,  array, char); break;
+                    case Type_Float:  CAST_ALL(result, f64,  array, char); break;
+                    case Types_Count: assert(false);
+                } break;
+            case Type_Int:
+                switch(type) {
+                    case Type_Bool:   CAST_ALL(result, bool, array, i64); break;
+                    case Type_Char:   CAST_ALL(result, char, array, i64); break;
+                    case Type_Int:    assert(false);
+                    case Type_Float:  CAST_ALL(result, f64,  array, i64); break;
+                    case Types_Count: assert(false);
+                } break;
+            case Type_Float:
+                switch(type) {
+                    case Type_Bool:   CAST_ALL(result, bool, array, f64); break;
+                    case Type_Char:   CAST_ALL(result, char, array, f64); break;
+                    case Type_Int:    CAST_ALL(result, i64,  array, f64); break;
+                    case Type_Float:  assert(false);
+                    case Types_Count: assert(false);
+                } break;
+            case Types_Count: assert(false);
+        }
+
+        #undef CAST_ALL
+
+        release_array(array);
+        return result;
+    }
 }
