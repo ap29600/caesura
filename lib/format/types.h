@@ -17,9 +17,4 @@ typedef struct {
 #define FORMAT_DIRECTIVE_CHARS 16
 typedef i64(*fmt_procedure_t)(Byte_Slice, va_list, Fmt_Info);
 
-typedef struct {
-    char directive[FORMAT_DIRECTIVE_CHARS];
-    fmt_procedure_t fmt;
-} Fmt_Directive;
-
 #endif

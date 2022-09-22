@@ -1,0 +1,7 @@
+#!/bin/sh
+
+CC='cc'
+STD='-std=c2x'
+OPT='-O2'
+DEBUG='-ggdb -fsanitize=address'
+WARN='-Wpedantic -Wimplicit -Wall -Wno-unused-function -Wno-stringop-overread'

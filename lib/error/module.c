@@ -7,4 +7,3 @@ cstring runtime_error_strings[Num_Errors] = {
     [Invalid_Exponent]  = "Invalid_Exponent",
     [Invalid_Parse]     = "Invalid_Parse",
 };
-

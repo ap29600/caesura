@@ -1,6 +1,8 @@
 #ifndef FZR_ERROR
 #define FZR_ERROR
 
+#include "../builtin.h"
+
 typedef enum {
     None = 0,
     Empty_Parse,

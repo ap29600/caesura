@@ -257,10 +257,10 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
 }
 
 void init_formats(void) {
-    register_format_directive((Fmt_Directive){"expr",    fmt_expression_va});
-    register_format_directive((Fmt_Directive){"node",    fmt_eval_node_va});
-    register_format_directive((Fmt_Directive){"ctx_dot", fmt_eval_context_as_dot_va});
-    register_format_directive((Fmt_Directive){"token",   fmt_token_va});
+    register_format_directive((Short_String){"expr"},    fmt_expression_va);
+    register_format_directive((Short_String){"node"},    fmt_eval_node_va);
+    register_format_directive((Short_String){"ctx_dot"}, fmt_eval_context_as_dot_va);
+    register_format_directive((Short_String){"token"},   fmt_token_va);
 }
 
 #endif // FORMAT_H

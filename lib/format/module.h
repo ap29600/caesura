@@ -12,46 +12,21 @@
 extern char       default_format_buffer_data[4096];
 extern Byte_Slice default_format_buffer;
 
-bool            register_format_directive(Fmt_Directive directive);
-fmt_procedure_t lookup_format_directive(const char begin[FORMAT_DIRECTIVE_CHARS]);
+bool register_format_directive(Short_String name, fmt_procedure_t format);
+fmt_procedure_t lookup_format_directive(Short_String name);
 
+String format(cstring fmt, ...);
 String format_to(Byte_Slice data, const char *fmt, ...);
-String format_to_va(Byte_Slice dest, cstring fmt, va_list params);
 
-static inline void print(String s) {
-    fwrite(s.begin, 1, s.end - s.begin, stdout);
-}
+void   print(String s);
+void   println(String s);
 
-static inline void println(String s) {
-    print(s);
-    fputc('\n', stdout);
-}
-
-static inline String format(cstring fmt, ...) {
-    va_list params;
-    va_start(params, fmt);
-    String result = format_to_va(default_format_buffer, fmt, params);
-    va_end(params);
-    return result;
-}
-
-static inline void format_print(cstring fmt, ...) {
-    va_list params;
-    va_start(params, fmt);
-    String result = format_to_va(default_format_buffer, fmt, params);
-    va_end(params);
-    print(result);
-}
-
-static inline void format_println(cstring fmt, ...) {
-    va_list params;
-    va_start(params, fmt);
-    String result = format_to_va(default_format_buffer, fmt, params);
-    va_end(params);
-    println(result);
-}
+void   format_print(cstring fmt, ...);
+void   format_println(cstring fmt, ...);
 
 void set_format_user_ptr(const void* user_ptr);
+
+/// predefined format functions, useful for composing new ones
 
 i64 fmt_i64      [[nodiscard]] (Byte_Slice data, i64      src, Fmt_Info info);
 i64 fmt_u64      [[nodiscard]] (Byte_Slice data, u64      src, Fmt_Info info);

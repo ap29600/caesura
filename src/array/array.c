@@ -57,5 +57,6 @@ Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
     array = realloc(array, sizeof(Array) + (array->shape+1) * sizes[type]);
     array->data = ((u8*)array) + sizeof(Array);
     memcpy(((u8*)array->data) + array->shape * sizes[type], elem, sizes[type]);
+    array->shape += 1;
     return array;
 }

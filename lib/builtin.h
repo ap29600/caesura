@@ -39,4 +39,7 @@ typedef const char *cstring;
 /// 32-bit UTF character type
 typedef u32 rune;
 
+static inline i64 min(i64 a, i64 b) { return a <= b ? a : b; }
+static inline i64 max(i64 a, i64 b) { return a >= b ? a : b; }
+
 #endif

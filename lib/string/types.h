@@ -10,6 +10,10 @@ typedef struct {
     cstring end;
 } String;
 
+typedef struct {
+    char begin[16];
+} Short_String;
+
 static u64 string_len(String s) {
     return s.end - s.begin;
 }
