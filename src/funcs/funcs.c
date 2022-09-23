@@ -4,14 +4,14 @@
 #include <math.h>
 
 
-static Eval_Node func_right_identity(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[right].type == Node_Array);
-    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(ctx->nodes[right].as.array)};
+static Eval_Node func_right_identity(Eval_Node *left, Eval_Node *right) {
+    assert(right->type == Node_Array);
+    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(right->as.array)};
 }
 
-static Eval_Node func_left_identity(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left].type == Node_Array);
-    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(ctx->nodes[left].as.array)};
+static Eval_Node func_left_identity(Eval_Node *left, Eval_Node *right) {
+    assert(left->type == Node_Array);
+    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(left->as.array)};
 }
 
 void init_default_scope() {

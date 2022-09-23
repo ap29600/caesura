@@ -45,8 +45,7 @@ static Node_Handle append_node(Eval_Context *ctx, Eval_Node node) {
     return ctx->count++;
 }
 
-void release_node(Eval_Context *ctx, Node_Handle expr) {
-    Eval_Node*node = &ctx->nodes[expr];
+void release_node(Eval_Node *node) {
     node->ref_count--;
     if (node->ref_count == 0) {
         if (node->type == Node_Array) release_array(node->as.array);
@@ -136,13 +135,13 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
                 Lookup_Entry entry = {0};
                 strncpy(entry.name, base[bind_name].as.identifier, 15);
 
-                if ( new_ctx.nodes[formal_left_arg].ref_count == 0
+                if ( new_ctx.nodes[formal_left_arg ].ref_count == 0
                   && new_ctx.nodes[formal_right_arg].ref_count == 0 ) {
-                    bind_value = eval(&new_ctx, bind_value);
 
-                    entry.value = new_ctx.nodes[bind_value];
+                    assert(bind_value == new_ctx.count - 1);
+                    entry.value = flat_eval(&new_ctx);
+                    assert(entry.value.type == Node_Array);
                     entry.value.as.array->ref_count++;
-
                     scope_insert(ctx->scope, entry);
 
                     free(new_ctx.nodes);
@@ -166,45 +165,45 @@ Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr) {
     return result;
 }
 
-
-Node_Handle eval(Eval_Context *ctx, Node_Handle expr) {
+Eval_Node eval_once(Eval_Context *ctx, Eval_Node *partial_results, Node_Handle expr) {
     switch(ctx->nodes[expr].type) {
         case Node_None:
-            assert(false);
+            return ctx->nodes[expr];
 
         case Node_Array:
-            return expr;
+            ctx->nodes[expr].as.array->ref_count ++;
+            return ctx->nodes[expr];
 
         case Node_Function:
-            return expr;
+            return ctx->nodes[expr];
 
         case Node_Identifier:
             assert(false && "Unhandled identifier in eval");
 
         case Node_Monad: {
-            Node_Handle func_handle  = eval(ctx, ctx->nodes[expr].as.args.callee);
-            assert(ctx->nodes[func_handle].type == Node_Function);
-            Node_Handle right_handle = eval(ctx, ctx->nodes[expr].as.args.right);
-            u64 old_ref_count = ctx->nodes[expr].ref_count;
-            ctx->nodes[expr] = ctx->nodes[func_handle].as.function(ctx, -1, right_handle);
-            ctx->nodes[expr].ref_count = old_ref_count;
-            release_node(ctx, func_handle);
-            release_node(ctx, right_handle);
-            return expr;
+            // assume everything needed is already evaluated;
+            Eval_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
+            Eval_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
+            assert(func->type == Node_Function);
+            Eval_Node result = func->as.function(NULL, right);
+            result.ref_count = ctx->nodes[expr].ref_count;
+            release_node(func);
+            release_node(right);
+            return result;
         }
 
         case Node_Dyad: {
-            Node_Handle func_handle = eval(ctx, ctx->nodes[expr].as.args.callee);
-            assert(ctx->nodes[func_handle].type == Node_Function);
-            Node_Handle left_handle  = eval(ctx, ctx->nodes[expr].as.args.left);
-            Node_Handle right_handle = eval(ctx, ctx->nodes[expr].as.args.right);
-            u64 old_ref_count = ctx->nodes[expr].ref_count;
-            ctx->nodes[expr] = ctx->nodes[func_handle].as.function(ctx, left_handle, right_handle);
-            ctx->nodes[expr].ref_count = old_ref_count;
-            release_node(ctx, left_handle);
-            release_node(ctx, func_handle);
-            release_node(ctx, right_handle);
-            return expr;
+            // assume everything needed is already evaluated;
+            Eval_Node *left  = &partial_results[ctx->nodes[expr].as.args.left  ];
+            Eval_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
+            Eval_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
+            assert(func->type == Node_Function);
+            Eval_Node result = func->as.function(left, right);
+            result.ref_count = ctx->nodes[expr].ref_count;
+            release_node(left);
+            release_node(func);
+            release_node(right);
+            return result;
         }
 
         case Node_Assign: {
@@ -213,4 +212,18 @@ Node_Handle eval(Eval_Context *ctx, Node_Handle expr) {
 
         default: assert(false);
     }
+}
+
+Eval_Node flat_eval(Eval_Context *ctx) {
+    Eval_Node partial_results[ctx->count];
+
+    for(Node_Handle idx = 0; idx < ctx->count; idx++) {
+        partial_results[idx] = eval_once(ctx, partial_results, idx);
+    }
+
+    for(Node_Handle idx = 0; idx < ctx->count - 1; idx++) {
+        assert(partial_results[idx].type == Node_None);
+    }
+
+    return partial_results[ctx->count - 1];
 }

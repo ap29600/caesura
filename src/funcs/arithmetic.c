@@ -13,11 +13,11 @@ Element_Type supertype(Element_Type a, Element_Type b) {
     return supertypes[a][b];
 }
 
-Eval_Node func_plus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_plus(Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
@@ -25,7 +25,7 @@ Eval_Node func_plus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
 
     left_  = array_cast(left_,  natural_type);
     right_ = array_cast(right_, natural_type);
-    if (left_ == ctx->nodes[left].as.array) left_ = clone_array(left_);
+    if (left_ == left->as.array) left_ = clone_array(left_);
 
     u64 n = left_->shape;
     switch (natural_type) {
@@ -46,11 +46,11 @@ Eval_Node func_plus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     return (Eval_Node){.type = Node_Array, .as.array = left_};
 }
 
-Eval_Node func_minus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_minus(Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
@@ -58,7 +58,7 @@ Eval_Node func_minus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
 
     left_  = array_cast(left_,  natural_type);
     right_ = array_cast(right_, natural_type);
-    if (left_ == ctx->nodes[left].as.array) left_ = clone_array(left_);
+    if (left_ == left->as.array) left_ = clone_array(left_);
 
     u64 n = left_->shape;
     switch (natural_type) {
@@ -80,18 +80,18 @@ Eval_Node func_minus(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
 }
 
 
-Eval_Node func_multiply(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_multiply(Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
 
     left_  = array_cast(left_,  natural_type);
     right_ = array_cast(right_, natural_type);
-    if (left_ == ctx->nodes[left].as.array) left_ = clone_array(left_);
+    if (left_ == left->as.array) left_ = clone_array(left_);
 
     u64 n = left_->shape;
     switch (natural_type) {
@@ -114,18 +114,18 @@ Eval_Node func_multiply(Eval_Context *ctx, Node_Handle left, Node_Handle right) 
     return (Eval_Node){.type = Node_Array, .as.array = left_};
 }
 
-Eval_Node func_divide(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_divide(Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
 
     left_  = array_cast(left_,  natural_type);
     right_ = array_cast(right_, natural_type);
-    if (left_ == ctx->nodes[left].as.array) left_ = clone_array(left_);
+    if (left_ == left->as.array) left_ = clone_array(left_);
 
     u64 n = left_->shape;
     switch (natural_type) {
@@ -146,11 +146,11 @@ Eval_Node func_divide(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     return (Eval_Node){.type = Node_Array, .as.array = left_};
 }
 
-Eval_Node func_mismatch (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_mismatch (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
@@ -183,11 +183,11 @@ Eval_Node func_mismatch (Eval_Context *ctx, Node_Handle left, Node_Handle right)
 }
 
 
-Eval_Node func_equal (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[left ].type == Node_Array);
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *left_  = borrow_array(ctx->nodes[left ].as.array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_equal (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
     assert(left_->shape == right_->shape);
 
     Element_Type natural_type = supertype(left_->type, right_->type);
@@ -219,13 +219,13 @@ Eval_Node func_equal (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     return (Eval_Node){.type = Node_Array, .as.array = result};
 }
 
-Eval_Node func_negate (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_negate (Eval_Node *left, Eval_Node *right) {
+    assert(right->type == Node_Array);
+    Array *right_ = borrow_array(right->as.array);
 
     Element_Type natural_type = right_->type == Type_Float ? Type_Float : Type_Int;
     right_ = array_cast(right_, natural_type);
-    if (right_ == ctx->nodes[right].as.array) right_ = clone_array(right_);
+    if (right_ == right->as.array) right_ = clone_array(right_);
 
     u64 n = right_->shape;
     switch (natural_type) {
@@ -241,13 +241,13 @@ Eval_Node func_negate (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
     return (Eval_Node){.type = Node_Array, .as.array = right_};
 }
 
-Eval_Node func_complement (Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_complement (Eval_Node *left, Eval_Node *right) {
+    assert(right->type == Node_Array);
+    Array *right_ = borrow_array(right->as.array);
 
     Element_Type natural_type = right_->type == Type_Float ? Type_Float : Type_Int;
     right_ = array_cast(right_, natural_type);
-    if (right_ == ctx->nodes[right].as.array) right_ = clone_array(right_);
+    if (right_ == right->as.array) right_ = clone_array(right_);
 
     u64 n = right_->shape;
     switch (natural_type) {
@@ -263,13 +263,13 @@ Eval_Node func_complement (Eval_Context *ctx, Node_Handle left, Node_Handle righ
     return (Eval_Node){.type = Node_Array, .as.array = right_};
 }
 
-Eval_Node func_square_root(Eval_Context *ctx, Node_Handle left, Node_Handle right) {
-    assert(ctx->nodes[right].type == Node_Array);
-    Array *right_ = borrow_array(ctx->nodes[right].as.array);
+Eval_Node func_square_root(Eval_Node *left, Eval_Node *right) {
+    assert(right->type == Node_Array);
+    Array *right_ = borrow_array(right->as.array);
 
     Element_Type natural_type = Type_Float;
     right_ = array_cast(right_, natural_type);
-    if (right_ == ctx->nodes[right].as.array) right_ = clone_array(right_);
+    if (right_ == right->as.array) right_ = clone_array(right_);
 
     u64 n = right_->shape;
     switch (natural_type) {

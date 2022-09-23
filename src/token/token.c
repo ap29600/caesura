@@ -52,7 +52,7 @@ static Bit_Set specials   = {(u64[256 / BITS]){0}};
 static Bit_Set delimiters = {(u64[256 / BITS]){0}};
 
 #define WHITESPACE U"\n\t "
-#define SPECIALS   U",.()"
+#define SPECIALS   U",.:!()"
 #define DELIMITERS WHITESPACE SPECIALS
 
 static void initialize_bit_sets() {

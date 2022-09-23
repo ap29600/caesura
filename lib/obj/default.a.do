@@ -3,6 +3,7 @@ redo-ifchange ../../options
 . ../../options
 
 RELEVANT_OBJECTS=$(find ../${2##lib} -type f -name '*.c' | sed 's/\.\.\/\(.*\)\/\(.*\).c/\1.\2.o/')
+
 redo-ifchange $RELEVANT_OBJECTS
 
 ar rcs $3.a $RELEVANT_OBJECTS 1>&2

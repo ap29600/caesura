@@ -44,10 +44,7 @@ typedef struct Ast_Node {
 struct Eval_Node;
 struct Eval_Context;
 
-typedef struct Eval_Node (*func_t)(
-    struct Eval_Context *ctx,
-    Node_Handle left,
-    Node_Handle right);
+typedef struct Eval_Node (*func_t)(struct Eval_Node *left, struct Eval_Node *right);
 
 typedef struct Eval_Node {
     Node_Type type;
@@ -93,7 +90,7 @@ typedef struct Eval_Context {
     Lookup_Scope *scope;
 } Eval_Context;
 
-void release_node(Eval_Context *ctx, Node_Handle expr);
+void release_node(Eval_Node *node);
 
 /// compiles into ctx as an expression tree the AST contained in base, starting from expression base[expr]
 /// returns the index of the parent expression;
@@ -101,6 +98,6 @@ Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr);
 
 /// evaluates in place the expression tree contained in ctx, starting from expression expr.
 /// returns the index of the result expression;
-Node_Handle eval(Eval_Context *ctx, Node_Handle expr);
+Eval_Node flat_eval(Eval_Context *ctx);
 
 #endif // EVAL_H

@@ -26,15 +26,32 @@ i32 main () {
 
         Scanner scanner = {.source = src, .location.fname = "stdin"};
         Ast ast = parse_expressions(&scanner);
+        set_format_user_ptr(ast.nodes);
+        format_println("desugars to: {expr}", ast.nodes[ast.parent]);
 
         Eval_Context ctx = {.scope = &default_scope};
         Node_Handle expr = apply(&ctx, ast.nodes, ast.parent);
-        Node_Handle parent = eval(&ctx, expr);
 
-        format_println("\t{node}", ctx.nodes[parent]);
+        // TODO: extract
+        for (int i = 0; i < ast.count; i++) {
+            if (ast.nodes[i].type == Node_Array) {
+                release_array(ast.nodes[i].as.array);
+            }
+            ast.nodes[i] = (Ast_Node){0};
+        }
+        free(ast.nodes);
 
-        for(int i = 0; i < ctx.count; ++i)
-            release_node(&ctx, i);
+        assert(expr == ctx.count-1);
+
+        Eval_Node result = flat_eval(&ctx);
+        format_println("\t{node}", result);
+        release_node(&result);
+
+        // TODO: extract
+        for(int i = 0; i < ctx.count; ++i) {
+            ctx.nodes[i].ref_count = 1; // dirty hack
+            release_node(&ctx.nodes[i]);
+        }
         free(ctx.nodes);
     }
 }
