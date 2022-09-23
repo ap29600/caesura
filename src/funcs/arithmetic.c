@@ -219,6 +219,150 @@ Eval_Node func_equal (Eval_Node *left, Eval_Node *right) {
     return (Eval_Node){.type = Node_Array, .as.array = result};
 }
 
+Eval_Node func_greater_equal (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
+    assert(left_->shape == right_->shape);
+
+    Element_Type natural_type = supertype(left_->type, right_->type);
+
+    left_  = array_cast(left_,  natural_type);
+    right_ = array_cast(right_, natural_type);
+
+    Array *result = make_array(NULL, left_->shape, Type_Bool);
+
+    u64 n = result->shape;
+    switch (natural_type) {
+        case Type_Char:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((char*)left_->data)[i] >= ((char*)right_->data)[i];
+            break;
+        case Type_Int:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((i64*)left_->data)[i] >= ((i64*)right_->data)[i];
+            break;
+        case Type_Float:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((f64*)left_->data)[i] >= ((f64*)right_->data)[i];
+            break;
+        case Type_Bool:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((bool*)left_->data)[i] >= ((bool*)right_->data)[i];
+            break;
+        case Types_Count: assert(false);
+    }
+
+    release_array(left_);
+    release_array(right_);
+    return (Eval_Node){.type = Node_Array, .as.array = result};
+}
+
+Eval_Node func_greater (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
+    assert(left_->shape == right_->shape);
+
+    Element_Type natural_type = supertype(left_->type, right_->type);
+
+    left_  = array_cast(left_,  natural_type);
+    right_ = array_cast(right_, natural_type);
+
+    Array *result = make_array(NULL, left_->shape, Type_Bool);
+
+    u64 n = result->shape;
+    switch (natural_type) {
+        case Type_Char:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((char*)left_->data)[i] > ((char*)right_->data)[i];
+            break;
+        case Type_Int:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((i64*)left_->data)[i] > ((i64*)right_->data)[i];
+            break;
+        case Type_Float:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((f64*)left_->data)[i] > ((f64*)right_->data)[i];
+            break;
+        case Type_Bool:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((bool*)left_->data)[i] > ((bool*)right_->data)[i];
+            break;
+        case Types_Count: assert(false);
+    }
+
+    release_array(left_);
+    release_array(right_);
+    return (Eval_Node){.type = Node_Array, .as.array = result};
+}
+
+Eval_Node func_less (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
+    assert(left_->shape == right_->shape);
+
+    Element_Type natural_type = supertype(left_->type, right_->type);
+
+    left_  = array_cast(left_,  natural_type);
+    right_ = array_cast(right_, natural_type);
+
+    Array *result = make_array(NULL, left_->shape, Type_Bool);
+
+    u64 n = result->shape;
+    switch (natural_type) {
+        case Type_Char:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((char*)left_->data)[i] < ((char*)right_->data)[i];
+            break;
+        case Type_Int:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((i64*)left_->data)[i] < ((i64*)right_->data)[i];
+            break;
+        case Type_Float:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((f64*)left_->data)[i] < ((f64*)right_->data)[i];
+            break;
+        case Type_Bool:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((bool*)left_->data)[i] < ((bool*)right_->data)[i];
+            break;
+        case Types_Count: assert(false);
+    }
+
+    release_array(left_);
+    release_array(right_);
+    return (Eval_Node){.type = Node_Array, .as.array = result};
+}
+
+Eval_Node func_less_equal (Eval_Node *left, Eval_Node *right) {
+    assert(left ->type == Node_Array);
+    assert(right->type == Node_Array);
+    Array *left_  = borrow_array(left ->as.array);
+    Array *right_ = borrow_array(right->as.array);
+    assert(left_->shape == right_->shape);
+
+    Element_Type natural_type = supertype(left_->type, right_->type);
+
+    left_  = array_cast(left_,  natural_type);
+    right_ = array_cast(right_, natural_type);
+
+    Array *result = make_array(NULL, left_->shape, Type_Bool);
+
+    u64 n = result->shape;
+    switch (natural_type) {
+        case Type_Char:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((char*)left_->data)[i] <= ((char*)right_->data)[i];
+            break;
+        case Type_Int:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((i64*)left_->data)[i] <= ((i64*)right_->data)[i];
+            break;
+        case Type_Float:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((f64*)left_->data)[i] <= ((f64*)right_->data)[i];
+            break;
+        case Type_Bool:
+            for(i64 i = 0; i < n; i++) ((bool*)result->data)[i] = ((bool*)left_->data)[i] <= ((bool*)right_->data)[i];
+            break;
+        case Types_Count: assert(false);
+    }
+
+    release_array(left_);
+    release_array(right_);
+    return (Eval_Node){.type = Node_Array, .as.array = result};
+}
+
 Eval_Node func_negate (Eval_Node *left, Eval_Node *right) {
     assert(right->type == Node_Array);
     Array *right_ = borrow_array(right->as.array);

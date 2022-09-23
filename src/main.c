@@ -26,8 +26,8 @@ i32 main () {
 
         Scanner scanner = {.source = src, .location.fname = "stdin"};
         Ast ast = parse_expressions(&scanner);
-        set_format_user_ptr(ast.nodes);
-        format_println("desugars to: {expr}", ast.nodes[ast.parent]);
+        // set_format_user_ptr(ast.nodes);
+        // format_println("desugars to: {expr}", ast.nodes[ast.parent]);
 
         Eval_Context ctx = {.scope = &default_scope};
         Node_Handle expr = apply(&ctx, ast.nodes, ast.parent);

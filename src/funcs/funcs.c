@@ -23,6 +23,10 @@ void init_default_scope() {
      scope_insert(&default_scope, (Lookup_Entry){ .name = "/",  .as_monadic = func_square_root,    .as_dyadic = func_divide        });
      scope_insert(&default_scope, (Lookup_Entry){ .name = "~",  .as_monadic = func_complement,     .as_dyadic = func_mismatch      });
      scope_insert(&default_scope, (Lookup_Entry){ .name = "=",  .as_monadic = NULL,                .as_dyadic = func_equal         });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = ">=", .as_monadic = NULL,                .as_dyadic = func_greater_equal });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = ">",  .as_monadic = NULL,                .as_dyadic = func_greater       });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "<=", .as_monadic = NULL,                .as_dyadic = func_less_equal    });
+     scope_insert(&default_scope, (Lookup_Entry){ .name = "<",  .as_monadic = NULL,                .as_dyadic = func_less          });
      scope_insert(&default_scope, (Lookup_Entry){ .name = "?",  .as_monadic = NULL,                .as_dyadic = func_filter        });
      scope_insert(&default_scope, (Lookup_Entry){ .name = "$",  .as_monadic = func_shape,          .as_dyadic = func_reshape        });
 }
