@@ -14,10 +14,10 @@ bool   string_eq_string(String a, String b);
 bool   string_eq_cstring(String a, cstring b);
 
 #define string_eq(a, b)                     \
-    _Generic((b),                           \
-                 String: string_eq_string,  \
-                 char *: string_eq_cstring, \
-                 cstring: string_eq_cstring \
-             )(a, b)
+	_Generic((b),                           \
+				 String: string_eq_string,  \
+				 char *: string_eq_cstring, \
+				 cstring: string_eq_cstring \
+			 )(a, b)
 
 #endif

@@ -5,13 +5,13 @@
 #include "../builtin.h"
 
 typedef struct {
-    char *begin;
-    char *end;
+	char *begin;
+	char *end;
 } Byte_Slice;
 
 typedef struct {
-    char pad_with;
-    const void *user_ptr;
+	char pad_with;
+	const void *user_ptr;
 } Fmt_Info;
 
 #define FORMAT_DIRECTIVE_CHARS 16

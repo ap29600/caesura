@@ -11,7 +11,7 @@ LIB_NAMES=$( echo $LIB_ARCHIVES |\
              sed 's/lib\/obj\/lib\([^/]*\).a/-l\1/' )
 
 redo-ifchange $LIB_ARCHIVES
-redo-ifchange src/main.c src/**/*.{c,h}
+redo-ifchange src/main.c src/**/*.{c,h} src/funcs/generated.c
 
 LINK="-lm -Llib/obj -Wl,--start-group $LIB_NAMES -Wl,--end-group"
 

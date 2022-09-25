@@ -6,16 +6,16 @@
 #include "../error/module.h"
 
 typedef struct {
-    u32 row;
-    u32 col;
-    u64 byte;
-    cstring fname;
+	u32 row;
+	u32 col;
+	u64 byte;
+	cstring fname;
 } Location;
 
 typedef struct {
-    String   source;
-    Location location;
-    Error    error;
+	String   source;
+	Location location;
+	Error    error;
 } Scanner;
 
 #endif

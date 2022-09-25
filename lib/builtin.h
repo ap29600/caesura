@@ -42,4 +42,25 @@ typedef u32 rune;
 static inline i64 min(i64 a, i64 b) { return a <= b ? a : b; }
 static inline i64 max(i64 a, i64 b) { return a >= b ? a : b; }
 
+// Uses compiler specific extensions if possible.
+#ifdef __GNUC__ // GCC, Clang, ICC
+ 
+#define unreachable() (__builtin_unreachable())
+ 
+#elifdef _MSC_VER // MSVC
+ 
+#define unreachable() (__assume(false))
+ 
+#else
+// Even if no extension is used, undefined behavior is still raised by
+// the empty function body and the noreturn attribute.
+ 
+// The external definition of unreachable_impl must be emitted in a separated TU
+// due to the rule for inline functions in C.
+ 
+[[noreturn]] inline void unreachable_impl() {}
+#define unreachable() (unreachable_impl())
+ 
+#endif
+
 #endif

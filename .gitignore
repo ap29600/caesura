@@ -1,4 +1,6 @@
 *.out
 *.o
 *.a
+**/.redo/**/*
+src/funcs/generated.c
 main

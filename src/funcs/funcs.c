@@ -4,31 +4,23 @@
 #include <math.h>
 
 
-static Eval_Node func_right_identity(Eval_Node *left, Eval_Node *right) {
-    assert(right->type == Node_Array);
-    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(right->as.array)};
+Eval_Node func_right_identity(Eval_Node *, Eval_Node *right) {
+	assert(right->type == Node_Array);
+	return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(right->as.array)};
 }
 
-static Eval_Node func_left_identity(Eval_Node *left, Eval_Node *right) {
-    assert(left->type == Node_Array);
-    return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(left->as.array)};
+Eval_Node func_left_identity(Eval_Node *left, Eval_Node *) {
+	assert(left->type == Node_Array);
+	return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(left->as.array)};
 }
 
-void init_default_scope() {
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "->", .as_monadic = func_right_identity, .as_dyadic = NULL               });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "<-", .as_monadic = NULL,                .as_dyadic = func_left_identity });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "+",  .as_monadic = func_right_identity, .as_dyadic = func_plus          });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "-",  .as_monadic = func_negate,         .as_dyadic = func_minus         });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "*",  .as_monadic = NULL,                .as_dyadic = func_multiply      });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "/",  .as_monadic = func_square_root,    .as_dyadic = func_divide        });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "~",  .as_monadic = func_complement,     .as_dyadic = func_mismatch      });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "=",  .as_monadic = NULL,                .as_dyadic = func_equal         });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = ">=", .as_monadic = NULL,                .as_dyadic = func_greater_equal });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = ">",  .as_monadic = NULL,                .as_dyadic = func_greater       });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "<=", .as_monadic = NULL,                .as_dyadic = func_less_equal    });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "<",  .as_monadic = NULL,                .as_dyadic = func_less          });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "?",  .as_monadic = NULL,                .as_dyadic = func_filter        });
-     scope_insert(&default_scope, (Lookup_Entry){ .name = "$",  .as_monadic = func_shape,          .as_dyadic = func_reshape        });
+void init_default_scope(void) {
+	scope_insert(&default_scope, (Lookup_Entry){ .name = {"->"}, .func = func_right_identity, .left = Type_None,      .right = Type_Generic_R, .result = Type_Generic_R });
+	scope_insert(&default_scope, (Lookup_Entry){ .name = {"<-"}, .func = func_left_identity,  .left = Type_Generic_L, .right = Type_Generic_R, .result = Type_Generic_L });
+	scope_insert(&default_scope, (Lookup_Entry){ .name = {"$"},  .func = func_shape,          .left = Type_None,      .right = Type_Generic_R, .result = Type_Int       });
+	scope_insert(&default_scope, (Lookup_Entry){ .name = {"$"},  .func = func_reshape,        .left = Type_Int,       .right = Type_Generic_R, .result = Type_Generic_R });
+	scope_insert(&default_scope, (Lookup_Entry){ .name = {"?"},  .func = func_filter,         .left = Type_Bool,      .right = Type_Generic_R, .result = Type_Generic_R });
+	bind_generated_funcs();
 }
 
 Lookup_Scope default_scope = {0};

@@ -24,6 +24,9 @@ void   println(String s);
 void   format_print(cstring fmt, ...);
 void   format_println(cstring fmt, ...);
 
+void   format_fprint(FILE *stream, cstring fmt, ...);
+void   format_fprintln(FILE *stream, cstring fmt, ...);
+
 void set_format_user_ptr(const void* user_ptr);
 
 /// predefined format functions, useful for composing new ones

@@ -2,6 +2,6 @@
 
 CC='cc'
 STD='-std=c2x'
-OPT='-O2 -flto'
+OPT='-O0'
 DEBUG='-ggdb -fsanitize=address'
-WARN='-Wpedantic -Wimplicit -Wall -Wno-unused-function -Wno-stringop-overread'
+WARN='-Wpedantic -Wimplicit -Werror -Wextra -Wall -Wno-unused-function -Wno-stringop-overread'
