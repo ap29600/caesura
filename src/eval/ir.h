@@ -42,5 +42,7 @@ struct Eval_Context {
 
 void release_node(IR_Node *node);
 IR_Node flat_eval(Eval_Context *ctx);
+void delete_eval_context(Eval_Context *ctx);
+void flush_eval_context(Eval_Context *ctx);
 
 #endif // IR_H

@@ -23,6 +23,7 @@ static Fmt_Directive directives[MAX_DIRECTIVES] = {
 	{ { "rune"  }, fmt_rune_va     },
 	{ { "error" }, fmt_error_va    },
 	{ { "loc"   }, fmt_location_va },
+	{ { "col"   }, fmt_color_va    },
 };
 
 static u64 directives_count = 0;

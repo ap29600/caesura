@@ -5,13 +5,6 @@
 #include "src/eval/eval.h"
 #include "src/eval/ast.h"
 
-typedef struct {
-	Ast_Node *nodes;
-	u64 count;
-	u64 cap;
-	Node_Handle parent;
-} Ast;
-
 Ast parse_expressions(Scanner *scanner);
 
 #endif // PARSER_H

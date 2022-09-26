@@ -254,14 +254,18 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 				// 	assert(false && "assigning functions is not implemented yet");
 				// }
 			}
+			break;default: assert(false);
 		}
 	}
 }
 
-Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr) {
+void apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr) {
+	// no expression
+	if (expr < 0) return;
+
 	Node_Handle result = apply_with(ctx, base, expr, -1, -1);
 	ctx->nodes[result].ref_count += 1;
-	return result;
+	return;
 }
 
 IR_Node eval_once(Eval_Context *ctx, IR_Node *partial_results, Node_Handle expr) {
@@ -314,12 +318,15 @@ IR_Node eval_once(Eval_Context *ctx, IR_Node *partial_results, Node_Handle expr)
 }
 
 IR_Node flat_eval(Eval_Context *ctx) {
+	if (ctx->count == 0) { return (IR_Node){0}; }
+
 	IR_Node partial_results[ctx->count];
 
 	for(Node_Handle idx = 0; idx < (Node_Handle) ctx->count; ++idx) {
 		partial_results[idx] = eval_once(ctx, partial_results, idx);
 	}
 
+	// at the end of evaluation, partial results have been cleaned up
 	for(Node_Handle idx = 0; idx < (Node_Handle) ctx->count - 1; ++idx) {
 		assert(partial_results[idx].type == IR_Type_None);
 	}

@@ -50,17 +50,14 @@ Array* make_array(const void* data, u64 shape, Element_Type type) {
 
 Array *borrow_array(Array *array) {
 	assert(array);
-	array->ref_count += 1;
+	++array->ref_count;
 	return array;
 }
 
 void release_array(Array *array) {
 	assert(array);
-	if (array->ref_count == 1) {
-		free(array);
-	} else {
-		array->ref_count -= 1;
-	}
+	if (array->ref_count == 1) { free(array); }
+	else { --array->ref_count; }
 }
 
 Array *clone_array(Array *array) {
@@ -75,7 +72,7 @@ Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
 	assert(array->ref_count == 1 && "permission to modify");
 	assert((u8*)array->data == ((u8*)array + sizeof(Array)) && "single allocation");
 	
-	u8 buffer[8] = {0};
+	u8 buffer[sizeof(i64)] = {0};
 	Element_Type supertype = ranges[array->type] >= ranges[type] ? array->type : type;
 	array = array_cast(array, supertype);
 
@@ -126,8 +123,8 @@ Array*  array_cast(Array *array, Element_Type type) {
 	} else {
 		Array *result = make_array(NULL, array->shape, type);
 
-		#define CAST_ALL(dest, dest_t, arr, arr_t)                 \
-			for(u64 i = 0; i < dest->shape; ++i) {                 \
+		#define CAST_ALL(dest, dest_t, arr, arr_t)                         \
+			for(u64 i = 0; i < dest->shape; ++i) {                     \
 				((dest_t*)dest->data)[i] = ((arr_t*)arr->data)[i]; \
 			}
 
@@ -137,47 +134,47 @@ Array*  array_cast(Array *array, Element_Type type) {
 			break;case Type_Generic_R: assert(false);
 			break;case Type_Bool:
 				switch(type) {
-					break;case Type_None:   assert(false);
+					break;case Type_None:      assert(false);
 					break;case Type_Generic_L: assert(false);
 					break;case Type_Generic_R: assert(false);
-					break;case Type_Bool:   assert(false);
-					break;case Type_Char:   CAST_ALL(result, char, array, bool);
-					break;case Type_Int:    CAST_ALL(result, i64,  array, bool);
-					break;case Type_Float:  CAST_ALL(result, f64,  array, bool);
-					break;case Types_Count: assert(false);
+					break;case Type_Bool:      assert(false);
+					break;case Type_Char:      CAST_ALL(result, char, array, bool);
+					break;case Type_Int:       CAST_ALL(result, i64,  array, bool);
+					break;case Type_Float:     CAST_ALL(result, f64,  array, bool);
+					break;case Types_Count:    assert(false);
 				}
 			break;case Type_Char:
 				switch(type) {
-					break;case Type_None:   assert(false);
+					break;case Type_None:      assert(false);
 					break;case Type_Generic_L: assert(false);
 					break;case Type_Generic_R: assert(false);
-					break;case Type_Bool:   CAST_ALL(result, bool, array, char);
-					break;case Type_Char:   assert(false);
-					break;case Type_Int:    CAST_ALL(result, i64,  array, char);
-					break;case Type_Float:  CAST_ALL(result, f64,  array, char);
-					break;case Types_Count: assert(false);
+					break;case Type_Bool:      CAST_ALL(result, bool, array, char);
+					break;case Type_Char:      assert(false);
+					break;case Type_Int:       CAST_ALL(result, i64,  array, char);
+					break;case Type_Float:     CAST_ALL(result, f64,  array, char);
+					break;case Types_Count:    assert(false);
 				}
 			break;case Type_Int:
 				switch(type) {
-					break;case Type_None:   assert(false);
+					break;case Type_None:      assert(false);
 					break;case Type_Generic_L: assert(false);
 					break;case Type_Generic_R: assert(false);
-					break;case Type_Bool:   CAST_ALL(result, bool, array, i64);
-					break;case Type_Char:   CAST_ALL(result, char, array, i64);
-					break;case Type_Int:    assert(false);
-					break;case Type_Float:  CAST_ALL(result, f64,  array, i64);
-					break;case Types_Count: assert(false);
+					break;case Type_Bool:      CAST_ALL(result, bool, array, i64);
+					break;case Type_Char:      CAST_ALL(result, char, array, i64);
+					break;case Type_Int:       assert(false);
+					break;case Type_Float:     CAST_ALL(result, f64,  array, i64);
+					break;case Types_Count:    assert(false);
 				}
 			break;case Type_Float:
 				switch(type) {
-					break;case Type_None:   assert(false);
+					break;case Type_None:      assert(false);
 					break;case Type_Generic_L: assert(false);
 					break;case Type_Generic_R: assert(false);
-					break;case Type_Bool:   CAST_ALL(result, bool, array, f64);
-					break;case Type_Char:   CAST_ALL(result, char, array, f64);
-					break;case Type_Int:    CAST_ALL(result, i64,  array, f64);
-					break;case Type_Float:  assert(false);
-					break;case Types_Count: assert(false);
+					break;case Type_Bool:      CAST_ALL(result, bool, array, f64);
+					break;case Type_Char:      CAST_ALL(result, char, array, f64);
+					break;case Type_Int:       CAST_ALL(result, i64,  array, f64);
+					break;case Type_Float:     assert(false);
+					break;case Types_Count:    assert(false);
 				}
 			break;case Types_Count: assert(false);
 		}

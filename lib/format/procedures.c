@@ -123,6 +123,19 @@ i64 fmt_error(Byte_Slice dest, Error src, Fmt_Info info) {
 	return fmt_cstr(dest, runtime_error_strings[src], info);
 }
 
+i64 fmt_color(Byte_Slice dest, Terminal_Color src, Fmt_Info info) {
+	char *const begin = dest.begin;
+	dest.begin += fmt_cstr(dest, "\x1b[", info);
+	dest.begin += fmt_u64(dest, src, info);
+	dest.begin += fmt_rune(dest, 'm', info);
+	return dest.begin - begin;
+}
+
+i64 fmt_color_va(Byte_Slice dest, va_list va, Fmt_Info info) {
+	Terminal_Color src = va_arg(va, Terminal_Color);
+	return fmt_color(dest, src, info);
+}
+
 /// these versions of formatting functions work on a va_list
 
 i64 fmt_f64_va(Byte_Slice data, va_list va, Fmt_Info info) {

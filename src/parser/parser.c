@@ -212,7 +212,9 @@ Ast parse_expressions(Scanner *state) {
 	for (; !scanner_is_empty(state); ) {
 		Token tok = next_token(state);
 
-		if (!tok.is_valid) {
+		if (tok.type == Token_Type_Empty) {
+			continue;
+		} else if (!tok.is_valid) {
 			report_state(state, stdout);
 			exit(1);
 		}
@@ -314,17 +316,22 @@ Ast parse_expressions(Scanner *state) {
 
 	assert(expr_state.parens.count == 0);
 	apply_functions(&expr_state, &result);
-	result.parent = expr_state.active_nodes.handles[0];
 
-	if (binding_name >= 0) {
-		result.parent = append_ast_node(
-				&result, (Ast_Node){
-					.type = Ast_Type_Assignment,
-					.as_Assignment = {
-						.left = binding_name,
-						.right = expr_state.active_nodes.handles[0],
-					}
-				});
+	if (expr_state.active_nodes.count != 0) {
+		result.parent = expr_state.active_nodes.handles[0];
+
+		if (binding_name >= 0) {
+			result.parent = append_ast_node(
+					&result, (Ast_Node){
+						.type = Ast_Type_Assignment,
+						.as_Assignment = {
+							.left = binding_name,
+							.right = expr_state.active_nodes.handles[0],
+						}
+					});
+		}
+	} else {
+		result.parent = -1;
 	}
 
 	free(expr_state.active_nodes.handles);

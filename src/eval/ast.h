@@ -34,6 +34,16 @@ struct Ast_Node {
 	};
 };
 
+typedef struct {
+	Ast_Node *nodes;
+	u64 count;
+	u64 cap;
+	Node_Handle parent;
+} Ast;
+
+void delete_ast(Ast *ast);
+void flush_ast(Ast *ast);
+
 // variant:    a possible type in struct `Ast_Node`'s anonymous union.
 // bind_name:  an identifier
 // expression: a value of type `Ast_Node`
