@@ -7,11 +7,11 @@
 #include "lib/bit_set.h"
 
 typedef enum {
-	Empty,
-	Int,
-	Float,
-	Operator,
-	Identifier,
+	Token_Type_Empty,
+	Token_Type_Int,
+	Token_Type_Float,
+	Token_Type_Operator,
+	Token_Type_Identifier,
 } Token_Type;
 
 typedef enum {

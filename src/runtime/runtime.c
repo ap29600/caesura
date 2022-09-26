@@ -1,17 +1,19 @@
-#include "funcs.h"
+#ifndef RUNTIME_H
+#define RUNTIME_H
 
 #include <stdlib.h>
+
 #include <math.h>
+#include "runtime.h"
 
-
-Eval_Node func_right_identity(Eval_Node *, Eval_Node *right) {
-	assert(right->type == Node_Array);
-	return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(right->as.array)};
+IR_Node func_right_identity(IR_Node *, IR_Node *right) {
+	assert(right->type == IR_Type_Array);
+	return (IR_Node) {.type = IR_Type_Array, .as.array = borrow_array(right->as.array)};
 }
 
-Eval_Node func_left_identity(Eval_Node *left, Eval_Node *) {
-	assert(left->type == Node_Array);
-	return (Eval_Node) {.type = Node_Array, .as.array = borrow_array(left->as.array)};
+IR_Node func_left_identity(IR_Node *left, IR_Node *) {
+	assert(left->type == IR_Type_Array);
+	return (IR_Node) {.type = IR_Type_Array, .as.array = borrow_array(left->as.array)};
 }
 
 void init_default_scope(void) {
@@ -24,3 +26,5 @@ void init_default_scope(void) {
 }
 
 Lookup_Scope default_scope = {0};
+
+#endif // RUNTIME_H

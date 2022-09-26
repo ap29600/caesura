@@ -16,22 +16,21 @@
 	#define COL_BLU_F ""
 #endif
 
+#include "src/eval/ast.h"
+#include "src/eval/ir.h"
 
 i64 fmt_eval_context_as_dot_va(Byte_Slice dest, va_list va, Fmt_Info info) {
 	Eval_Context *src = va_arg(va, Eval_Context*);
 	return fmt_eval_context_as_dot(dest, src, info);
 }
 
-i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
+i64 fmt_eval_node (Byte_Slice dest, IR_Node src, Fmt_Info info) {
 	const char *begin = dest.begin;
 	switch(src.type) {
-		break;case Node_None:
+		break;case IR_Type_None:
 			dest.begin += fmt_cstr(dest, "None", info);
 
-		break;case Node_Identifier:
-			assert(false && "unhandled identifier in eval node");
-
-		break;case Node_Array:
+		break;case IR_Type_Array:
 			switch(src.as.array->type) {
 				break;case Type_None: assert(false);
 				break;case Type_Generic_L: assert(false);
@@ -74,13 +73,13 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 				break;case Types_Count: assert(false);
 			}
 
-		break;case Node_Monad:
+		break;case IR_Type_Monad:
 			dest.begin += fmt_cstr(dest, "Monad", info);
 
-		break;case Node_Dyad:
+		break;case IR_Type_Dyad:
 			dest.begin += fmt_cstr(dest, "Dyad", info);
 
-		break;case Node_Function:
+		break;case IR_Type_Function:
 			dest.begin += fmt_cstr(dest, "Func@0x", info);
 			dest.begin += fmt_ptr(dest, (uintptr_t)src.as.function, info);
 
@@ -91,7 +90,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 }
 
 i64 fmt_eval_node_va (Byte_Slice dest, va_list va, Fmt_Info info) {
-	Eval_Node node = va_arg(va, Eval_Node);
+	IR_Node node = va_arg(va, IR_Node);
 	return fmt_eval_node(dest, node, info);
 }
 
@@ -105,11 +104,11 @@ i64 fmt_eval_context_as_dot(Byte_Slice dest, Eval_Context *src, Fmt_Info info) {
 
 	for(u64 i = 0; i < src->count; ++i) {
 		switch(src->nodes[i].type) {
-			break;case Node_Monad:
+			break;case IR_Type_Monad:
 				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
 				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
 
-			break;case Node_Dyad:
+			break;case IR_Type_Dyad:
 				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=left]\n", i, src->nodes[i].as.args.left));
 				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
 				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
@@ -134,27 +133,27 @@ i64 fmt_token(Byte_Slice dest, Token tok, Fmt_Info info) {
 	}
 
 	switch (tok.type) {
-		break;case Int:
+		break;case Token_Type_Int:
 			dest.begin += fmt_cstr(dest, "i64: " COL_GRN_F, info);
 			dest.begin += fmt_i64(dest, tok.i64value, info);
 			dest.begin += fmt_cstr(dest, RESET " ", info);
 
-		break;case Float:
+		break;case Token_Type_Float:
 			dest.begin += fmt_cstr(dest, "f64: " COL_GRN_F, info);
 			dest.begin += fmt_f64(dest, tok.f64value, info);
 			dest.begin += fmt_cstr(dest, RESET " ", info);
 
-		break;case Operator:
+		break;case Token_Type_Operator:
 			dest.begin += fmt_cstr(dest, "op: " COL_BLU_F, info);
 			dest.begin += fmt_cstr(dest, operator_strings[tok.op], info);
 			dest.begin += fmt_cstr(dest, RESET " ", info);
 
-		break;case Identifier:
+		break;case Token_Type_Identifier:
 			dest.begin += fmt_cstr(dest, "identifier: " COL_BLU_F "`", info);
 			dest.begin += fmt_str(dest, tok.text, info);
 			dest.begin += fmt_cstr(dest, "`" RESET " ", info);
 
-		break;case Empty:
+		break;case Token_Type_Empty:
 			dest.begin += fmt_cstr(dest, "nil ", info);
 	}
 
@@ -171,63 +170,62 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
 	const Ast_Node *ctx = info.user_ptr;
 	const char *begin = dest.begin;
 	switch (src.type) {
-		break;case Node_None:
+		break;case Ast_Type_None:
 			dest.begin += fmt_cstr(dest, "<No_Expression>", info);
 
-
-		break;case Node_Monad:
+		MATCH_AST(Monadic, monad, src) {
 			dest.begin += fmt_rune(dest, '(', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+			dest.begin += fmt_expression(dest, ctx[monad.func], info);
 			dest.begin += fmt_rune(dest, ' ', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
+			dest.begin += fmt_expression(dest, ctx[monad.right], info);
 			dest.begin += fmt_rune(dest, ')', info);
+		}
 
-		break;case Node_Dyad:
+		MATCH_AST(Dyadic, dyad, src) {
 			dest.begin += fmt_rune(dest, '(', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
+			dest.begin += fmt_expression(dest, ctx[dyad.left], info);
 			dest.begin += fmt_rune(dest, ' ', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+			dest.begin += fmt_expression(dest, ctx[dyad.func], info);
 			dest.begin += fmt_rune(dest, ' ', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.right], info);
+			dest.begin += fmt_expression(dest, ctx[dyad.right], info);
 			dest.begin += fmt_rune(dest, ')', info);
+		}
 
-		break;case Node_Function:
-			assert(false);
+		MATCH_AST(Identifier, id, src) {
+			dest.begin += fmt_cstr(dest, id.begin, info);
+		}
 
-		break;case Node_Identifier:
-			dest.begin += fmt_cstr(dest, src.as.identifier, info);
-
-		break;case Node_Array:
-			switch(src.as.array->type) {
+		MATCH_AST(Array_Ptr, arr, src) {
+			switch(arr->type) {
 				break;case Type_None: assert(false);
 				break;case Type_Generic_R: assert(false);
 				break;case Type_Generic_L: assert(false);
 				break;case Type_Float: {
-					f64 *data = src.as.array->data;
-					for (u64 i = 0; i < src.as.array->shape; ++i) {
+					f64 *data = arr->data;
+					for (u64 i = 0; i < arr->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
 						dest.begin += fmt_f64(dest, data[i], info);
 					}
 				}
 
 				break;case Type_Int: {
-					i64 *data = src.as.array->data;
-					for (u64 i = 0; i < src.as.array->shape; ++i) {
+					i64 *data = arr->data;
+					for (u64 i = 0; i < arr->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
 						dest.begin += fmt_i64(dest, data[i], info);
 					}
 				}
 
 				break;case Type_Char: {
-					String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
+					String data = {.begin = arr->data, .end = (char*)arr->data + arr->shape};
 					dest.begin += fmt_rune(dest, '"', info);
 					dest.begin += fmt_str(dest, data, info);
 					dest.begin += fmt_rune(dest, '"', info);
 				}
 
 				break;case Type_Bool: {
-					bool *data = src.as.array->data;
-					for (u64 i = 0; i < src.as.array->shape; ++i) {
+					bool *data = arr->data;
+					for (u64 i = 0; i < arr->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
 						dest.begin += fmt_rune(dest, "01"[data[i]], info);
 					}
@@ -235,16 +233,23 @@ i64 fmt_expression(Byte_Slice dest, Ast_Node src, Fmt_Info info) {
 
 				break;case Types_Count: assert(false);
 			}
+		}
 
-		break;case Node_Assign:
+		MATCH_AST(Assignment, assign, src) {
 			dest.begin += fmt_rune(dest, '(', info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.left], info);
+			dest.begin += fmt_expression(dest, ctx[assign.left], info);
 			dest.begin += fmt_cstr(dest, ":", info);
-			dest.begin += fmt_expression(dest, ctx[src.as.args.callee], info);
+			dest.begin += fmt_expression(dest, ctx[assign.right], info);
 			dest.begin += fmt_rune(dest, ')', info);
+		}
 	}
 
 	return dest.begin - begin;
+}
+
+i64 fmt_expression_va(Byte_Slice dest, va_list va, Fmt_Info info) {
+	Ast_Node src = va_arg(va, Ast_Node);
+	return fmt_expression(dest, src, info);
 }
 
 i64 fmt_type (Byte_Slice dest, Element_Type src, Fmt_Info info) {

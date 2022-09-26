@@ -120,12 +120,12 @@ static void desugar_dyad_operator(Expression_Parser_State *state, Ast *result) {
 		Node_Handle right_arg = state->active_nodes.handles[right_arg_pos];
 
 		// expect two dummy nodes to overwrite
-		assert(result->nodes[dyad].type == Node_None);
-		assert(result->nodes[dyad+1].type == Node_None);
+		assert(result->nodes[dyad].type == Ast_Type_None);
+		assert(result->nodes[dyad+1].type == Ast_Type_None);
 
-		result->nodes[dyad] = (Ast_Node){ .type= Node_Identifier, .as.identifier = "->" };
-		result->nodes[dyad+1] = (Ast_Node){ .type = Node_Dyad, .as.args = {
-			.left = left_arg, .callee = right_arg, .right = dyad,
+		result->nodes[dyad] = (Ast_Node){ .type= Ast_Type_Identifier, .as_Identifier = {"->"} };
+		result->nodes[dyad+1] = (Ast_Node){ .type = Ast_Type_Dyadic, .as_Dyadic = {
+			.left = left_arg, .func = right_arg, .right = dyad,
 		}};
 
 		state->active_nodes.handles[right_arg_pos-1] = dyad+1;
@@ -158,10 +158,10 @@ static void desugar_monad_operator(Expression_Parser_State *state, Ast *result) 
 		Node_Handle right_arg = state->active_nodes.handles[right_arg_pos];
 
 		// expect one dummy node to overwrite
-		assert(result->nodes[monad].type == Node_None);
+		assert(result->nodes[monad].type == Ast_Type_None);
 
-		result->nodes[monad] = (Ast_Node){ .type = Node_Monad, .as.args = {
-			.callee = left_arg, .right = right_arg,
+		result->nodes[monad] = (Ast_Node){ .type = Ast_Type_Monadic, .as_Monadic = {
+			.func = left_arg, .right = right_arg,
 		}};
 
 		state->active_nodes.handles[right_arg_pos-1] = monad;
@@ -172,35 +172,29 @@ static void desugar_monad_operator(Expression_Parser_State *state, Ast *result) 
 static void apply_functions(Expression_Parser_State *state, Ast *result) {
 
 	desugar_dyad_operator(state, result);
+
 	desugar_monad_operator(state, result);
 
-	while (has_active_locals(state, 3)) {
-		Node_Handle right  = pop_active_local(state);
-		Node_Handle callee = pop_active_local(state);
-		Node_Handle left   = pop_active_local(state);
+	for (; has_active_locals(state, 3);) {
+		Node_Handle right = pop_active_local(state);
+		Node_Handle func  = pop_active_local(state);
+		Node_Handle left  = pop_active_local(state);
 		Node_Handle val = append_ast_node(
 				result, (Ast_Node){
-					.type = Node_Dyad,
-					.as.args = {
-						.left = left,
-						.callee = callee,
-						.right = right,
-					}
+					.type = Ast_Type_Dyadic,
+					.as_Dyadic = { .left = left, .func = func, .right = right, },
 				});
 
 		append_handle(&state->active_nodes, val);
 	}
 
-	while (has_active_locals(state, 2)) {
-		Node_Handle right  = pop_active_local(state);
-		Node_Handle callee = pop_active_local(state);
+	for (; has_active_locals(state, 2);) {
+		Node_Handle right = pop_active_local(state);
+		Node_Handle func  = pop_active_local(state);
 		Node_Handle val = append_ast_node(
 				result, (Ast_Node){
-					.type = Node_Monad,
-					.as.args = {
-						.callee = callee,
-						.right = right,
-					}
+					.type = Ast_Type_Monadic,
+					.as_Monadic = { .func = func, .right = right, },
 				});
 
 		append_handle(&state->active_nodes, val);
@@ -226,50 +220,62 @@ Ast parse_expressions(Scanner *state) {
 		if (enlisting) {
 			assert(has_active_locals(&expr_state, 1));
 			Ast_Node *node = &result.nodes[last_active_local(&expr_state)];
-			assert(node->type == Node_Array);
+			assert(node->type == Ast_Type_Array_Ptr);
 			switch(tok.type) {
-				break;case Float: node->as.array = array_append_elem(&tok.f64value, node->as.array, Type_Float);
-				break;case Int:   node->as.array = array_append_elem(&tok.i64value, node->as.array, Type_Int);
-				break;default:
+				break;case Token_Type_Float: {
+					node->as_Array_Ptr = array_append_elem(&tok.f64value, node->as_Array_Ptr, Type_Float);
+				}
+
+				break;case Token_Type_Int:   {
+					node->as_Array_Ptr = array_append_elem(&tok.i64value, node->as_Array_Ptr, Type_Int);
+				}
+
+				break;default: {
 					assert(false);
 					unreachable();
+				}
 			}
 			enlisting = false;
 			continue;
 		}
 
 		switch(tok.type) {
-			break;case Empty:
+			break;case Token_Type_Empty:
 
-			break;case Int:
+			break;case Token_Type_Int: {
 				append_handle(&expr_state.active_nodes,
 					append_ast_node(&result, (Ast_Node){
-						.type = Node_Array,
-						.as.array = make_array(&tok.i64value, 1, Type_Int),
+						.type = Ast_Type_Array_Ptr,
+						.as_Array_Ptr = make_array(&tok.i64value, 1, Type_Int),
 					})
 				);
-			break;case Float:
+			}
+
+			break;case Token_Type_Float: {
 				append_handle(&expr_state.active_nodes,
 					append_ast_node(&result, (Ast_Node){
-						.type = Node_Array,
-						.as.array = make_array(&tok.f64value, 1, Type_Float),
+						.type = Ast_Type_Array_Ptr,
+						.as_Array_Ptr = make_array(&tok.f64value, 1, Type_Float),
 					})
 				);
+			}
 
-			break;case Identifier: {
-				Ast_Node node = {.type = Node_Identifier, .as.identifier= {0}};
+			break;case Token_Type_Identifier: {
+				Ast_Node node = { .type = Ast_Type_Identifier };
 				assert(string_len(tok.text) <= 15);
-				strncpy(node.as.identifier, tok.text.begin, string_len(tok.text));
+				strncpy(node.as_Identifier.begin, tok.text.begin, string_len(tok.text));
 				append_handle(&expr_state.active_nodes, append_ast_node(&result, node));
 			}
 
-			break;case Operator:
+			break;case Token_Type_Operator: {
 				switch (tok.op) {
-					break;case List:
+					break;case List: {
 						enlisting = true;
+					}
 
-					break;case LParen:
+					break;case LParen: {
 						append_handle(&expr_state.parens, result.count);
+					}
 
 					break;case RParen: {
 						assert(expr_state.parens.count > 0);
@@ -281,23 +287,28 @@ Ast parse_expressions(Scanner *state) {
 						assert(expr_state.parens.count == 0); // must be at toplevel
 						assert(expr_state.active_nodes.count == 1); // must have something to bind to
 						assert(pop_handle(&expr_state.active_nodes) == 0);
-						assert(result.nodes[0].type == Node_Identifier);
+						assert(result.nodes[0].type == Ast_Type_Identifier);
 						binding_name = 0;
 					}
 
 					break;case Dyad: {
-						append_ast_node(&result, (Ast_Node){0}); // dummy node for '->'
-						append_ast_node(&result, (Ast_Node){0}); // dummy node for 'dyad'
+						// dummy nodes for '->' and 'dyad'
+						append_ast_node(&result, (Ast_Node){0});
+						append_ast_node(&result, (Ast_Node){0});
 						append_handle(&expr_state.dyad_operators, result.count-2);
 					}
 
 					break;case Monad: {
-						append_ast_node(&result, (Ast_Node){0}); // dummy node for 'monad'
+						// dummy node for 'monad'
+						append_ast_node(&result, (Ast_Node){0});
 						append_handle(&expr_state.monad_operators, result.count-1);
 					}
 
-					break;default: assert(false && "unhandled operator");
+					break;default: {
+						assert(false && "unhandled operator");
+					}
 				}
+			}
 		}
 	}
 
@@ -308,8 +319,8 @@ Ast parse_expressions(Scanner *state) {
 	if (binding_name >= 0) {
 		result.parent = append_ast_node(
 				&result, (Ast_Node){
-					.type = Node_Assign,
-					.as.args = {
+					.type = Ast_Type_Assignment,
+					.as_Assignment = {
 						.left = binding_name,
 						.right = expr_state.active_nodes.handles[0],
 					}

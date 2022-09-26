@@ -7,9 +7,13 @@
 #include "lib/format/module.h"
 #include "lib/string/module.h"
 
-#include "src/funcs/funcs.h"
+#include "src/runtime/runtime.h"
 #include "src/parser/parser.h"
 #include "src/formats/formats.h"
+
+#include "src/eval/eval.h"
+#include "src/eval/ir.h"
+#include "src/eval/ast.h"
 
 i32 main () {
 	init_formats();
@@ -34,8 +38,8 @@ i32 main () {
 
 		// TODO: extract
 		for (u64 i = 0; i < ast.count; ++i) {
-			if (ast.nodes[i].type == Node_Array) {
-				release_array(ast.nodes[i].as.array);
+			if (ast.nodes[i].type == Ast_Type_Array_Ptr) {
+				release_array(ast.nodes[i].as_Array_Ptr);
 			}
 			ast.nodes[i] = (Ast_Node){0};
 		}
@@ -44,7 +48,7 @@ i32 main () {
 		assert(expr == (Node_Handle)ctx.count-1);
 		(void)expr;
 
-		Eval_Node result = flat_eval(&ctx);
+		IR_Node result = flat_eval(&ctx);
 		format_println("\t{node}", result);
 		release_node(&result);
 

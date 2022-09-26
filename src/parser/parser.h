@@ -3,6 +3,7 @@
 
 #include "lib/scanner/types.h"
 #include "src/eval/eval.h"
+#include "src/eval/ast.h"
 
 typedef struct {
 	Ast_Node *nodes;

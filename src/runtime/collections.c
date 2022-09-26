@@ -1,4 +1,4 @@
-#include "funcs.h"
+#include "runtime.h"
 
 static const u64 sizes[] = {
 	[Type_Float] = sizeof(f64),
@@ -7,9 +7,9 @@ static const u64 sizes[] = {
 	[Type_Bool]  = sizeof(bool),
 };
 
-Eval_Node func_filter     (Eval_Node *left, Eval_Node *right) {
-	assert(left ->type == Node_Array);
-	assert(right->type == Node_Array);
+IR_Node func_filter     (IR_Node *left, IR_Node *right) {
+	assert(left ->type == IR_Type_Array);
+	assert(right->type == IR_Type_Array);
 	Array *left_  = borrow_array(left ->as.array);
 	Array *right_ = borrow_array(right->as.array);
 	assert(left_->shape == right_->shape);
@@ -32,12 +32,12 @@ Eval_Node func_filter     (Eval_Node *left, Eval_Node *right) {
 	release_array(left_);
 	release_array(right_);
 
-	return (Eval_Node){ .type = Node_Array, .as.array = result};
+	return (IR_Node){ .type = IR_Type_Array, .as.array = result};
 }
 
-Eval_Node func_reshape (Eval_Node *left, Eval_Node *right) {
-	assert(left->type == Node_Array);
-	assert(right->type == Node_Array);
+IR_Node func_reshape (IR_Node *left, IR_Node *right) {
+	assert(left->type == IR_Type_Array);
+	assert(right->type == IR_Type_Array);
 	Array *left_  = borrow_array(left ->as.array);
 	Array *right_ = borrow_array(right->as.array);
 	assert(left_->shape == 1);
@@ -54,14 +54,14 @@ Eval_Node func_reshape (Eval_Node *left, Eval_Node *right) {
 	
 	release_array(right_);
 	release_array(left_);
-	return (Eval_Node){ .type = Node_Array, .as.array = result};
+	return (IR_Node){ .type = IR_Type_Array, .as.array = result};
 }
 
-Eval_Node func_shape (Eval_Node *, Eval_Node *right) {
-	assert(right->type == Node_Array);
+IR_Node func_shape (IR_Node *, IR_Node *right) {
+	assert(right->type == IR_Type_Array);
 	Array *right_ = borrow_array(right->as.array);
 	Array *result = make_array(NULL, 1, Type_Int);
 	((i64*)result->data)[0] = right_->shape;
 	release_array(right_);
-	return (Eval_Node){ .type = Node_Array, .as.array = result};
+	return (IR_Node){ .type = IR_Type_Array, .as.array = result};
 }

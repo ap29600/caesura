@@ -59,9 +59,9 @@ def generate_implementation(name, info, left_t, right_t):
     op = info['op'](left_t, right_t)
     left_expr  = f"(({left_t}*)left->data)[i]"
     right_expr = f"(({right_t}*)right->data)[i]"
-    print(f"Eval_Node func_dyad_{name}_{left_t}_{right_t} (Eval_Node *left_node, Eval_Node *right_node) {{")
-    print( "\tassert(left_node->type == Node_Array);")
-    print( "\tassert(right_node->type == Node_Array);")
+    print(f"IR_Node func_dyad_{name}_{left_t}_{right_t} (IR_Node *left_node, IR_Node *right_node) {{")
+    print( "\tassert(left_node->type == IR_Type_Array);")
+    print( "\tassert(right_node->type == IR_Type_Array);")
     print( "\tArray *left  = borrow_array(left_node->as.array);")
     print( "\tArray *right = borrow_array(right_node->as.array);")
     print( "")
@@ -75,7 +75,7 @@ def generate_implementation(name, info, left_t, right_t):
     print( "")
     print( "\trelease_array(left);")
     print( "\trelease_array(right);")
-    print( "\treturn (Eval_Node) {.type = Node_Array, .as.array = result};")
+    print( "\treturn (IR_Node) {.type = IR_Type_Array, .as.array = result};")
     print( "}")
     print( "")
 
@@ -94,7 +94,7 @@ def generate_func_binding(name, info, left_t, right_t):
 
 if __name__ == '__main__':
     bindings = []
-    print('#include "funcs.h"')
+    print('#include "runtime.h"')
     print('')
     for name, info in dyadic_funcs.items():
         for left_t in types.keys():

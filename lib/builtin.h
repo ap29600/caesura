@@ -63,4 +63,14 @@ static inline i64 max(i64 a, i64 b) { return a >= b ? a : b; }
  
 #endif
 
+#define CONCAT(a, b) CONCAT2(a, b)
+
+#define CONCAT2(a, b) a ## b
+
+#define MATCH_TYPED_UNION(prefix, variant, bind_name, expression, field) \
+	break;case CONCAT(prefix, variant): for(variant bind_name = (expression).CONCAT(as_, variant), *__cond = (void*)0x1; __cond; __cond = NULL)
+
+#define REF_MATCH_TYPED_UNION(prefix, variant, bind_name, expression, field) \
+	break;case CONCAT(prefix, variant): for(variant *bind_name = &(expression).CONCAT(as_, variant), *__cond = (void*)0x1; __cond; __cond = NULL)
+
 #endif

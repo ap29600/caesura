@@ -2,12 +2,10 @@
 #include "lib/bit_set.h"
 
 #include "eval.h"
-#include "src/funcs/funcs.h"
+#include "ast.h"
+#include "ir.h"
 
-i64 fmt_expression_va(Byte_Slice dest, va_list va, Fmt_Info info) {
-	Ast_Node src = va_arg(va, Ast_Node);
-	return fmt_expression(dest, src, info);
-}
+#include "src/runtime/runtime.h"
 
 i32 entry_cmp (const void* a, const void*b) {
 	const Lookup_Entry *aa = a;
@@ -49,21 +47,21 @@ Lookup_Entry *scope_lookup(Lookup_Scope *scope, Short_String name) {
 	}
 }
 
-static Node_Handle append_node(Eval_Context *ctx, Eval_Node node) {
+static Node_Handle append_node(Eval_Context *ctx, IR_Node node) {
 	if (ctx->count >= ctx->cap) {
 		ctx->cap = ctx->cap == 0 ? 8 : (ctx->cap * 2);
-		ctx->nodes = realloc(ctx->nodes, ctx->cap * sizeof(Eval_Node));
+		ctx->nodes = realloc(ctx->nodes, ctx->cap * sizeof(IR_Node));
 	}
 
 	ctx->nodes[ctx->count] = node;
 	return ctx->count++;
 }
 
-void release_node(Eval_Node *node) {
+void release_node(IR_Node *node) {
 	--node->ref_count;
 	if (node->ref_count == 0) {
-		if (node->type == Node_Array) { release_array(node->as.array); }
-		*node = (Eval_Node){.type = Node_None};
+		if (node->type == IR_Type_Array) { release_array(node->as.array); }
+		*node = (IR_Node){.type = IR_Type_None};
 	}
 }
 
@@ -102,29 +100,24 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 	// TODO: use a stack for recursion
 	while (true) {
 		switch (base[expr].type) {
-			break;case Node_None:
+			break;case Ast_Type_None:
 				assert(false);
 				unreachable();
 
-			break;case Node_Array:
-				return append_node(ctx, (Eval_Node){
-						.type = Node_Array,
-						.eval_type = base[expr].as.array->type,
-						.as.array = borrow_array(base[expr].as.array)
-					});
+			MATCH_AST(Array_Ptr, array, base[expr]) {
+				return append_node(ctx, (IR_Node){
+					.type = IR_Type_Array,
+					.eval_type = array->type,
+					.as.array = borrow_array(array),
+				});
+			}
 
-			break;case Node_Function:
-				assert(false);
-				unreachable();
-
-			break;case Node_Identifier: {
-
-				Lookup_Entry key = {0};
-				strncpy(key.name.begin, base[expr].as.identifier, sizeof(Short_String));
+			MATCH_AST(Identifier, identifier, base[expr]) {
+				Lookup_Entry key = { .name = identifier };
 				Lookup_Entry *matches = scope_lookup(ctx->scope, key.name);
 
 				if (!matches) {
-					format_println("Error: `{cstr}` not found in environment", base[expr].as.identifier);
+					format_println("Error: `{cstr}` not found in environment", identifier.begin);
 					fflush(stdout);
 					assert(false && "lookup failed");
 					unreachable();
@@ -138,8 +131,8 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 					for (u64 i = 0; i < guard && entry_cmp(&matches[i], &key) == 0; ++i) {
 						Element_Type result;
 						if ((result = dyadic_typecheck(&matches[i], left_t, right_t))) {
-							Node_Handle func_node = append_node(ctx, (Eval_Node) {
-								.type = Node_Function,
+							Node_Handle func_node = append_node(ctx, (IR_Node) {
+								.type = IR_Type_Function,
 								.eval_type = Type_None,
 								.as.function = matches[i].func,
 							});
@@ -147,8 +140,8 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 							++ctx->nodes[left     ].ref_count;
 							++ctx->nodes[func_node].ref_count;
 							++ctx->nodes[right    ].ref_count;
-							return append_node(ctx, (Eval_Node) {
-								.type = Node_Dyad,
+							return append_node(ctx, (IR_Node) {
+								.type = IR_Type_Dyad,
 								.eval_type = result,
 								.as.args = {
 									.left   = left,
@@ -165,16 +158,16 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 					for (u64 i = 0; i < guard && entry_cmp(&matches[i], &key) == 0; ++i) {
 						Element_Type result;
 						if ((result = monadic_typecheck(&matches[i], right_t))) {
-							Node_Handle func_node = append_node( ctx, (Eval_Node) {
-								.type = Node_Function,
+							Node_Handle func_node = append_node( ctx, (IR_Node) {
+								.type = IR_Type_Function,
 								.eval_type = Type_None,
 								.as.function = matches[i].func,
 							});
 
 							++ctx->nodes[func_node].ref_count;
 							++ctx->nodes[right    ].ref_count;
-							return append_node(ctx, (Eval_Node) {
-								.type = Node_Monad,
+							return append_node(ctx, (IR_Node) {
+								.type = IR_Type_Monad,
 								.eval_type = result,
 								.as.args = {
 									.callee = func_node,
@@ -186,7 +179,7 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 				}
 
 				format_fprintln(stderr, "Error: {cstr} matches {u64} rules, but none type check",
-					base[expr].as.identifier,
+					identifier.begin,
 					guard
 				);
 				format_fprintln(stderr, "\ttypes are: {type}, {type}",
@@ -207,23 +200,23 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 				unreachable();
 			}
 
-			break;case Node_Monad: {
-				right = apply_with(ctx, base, base[expr].as.args.right, left, right);
+			MATCH_AST(Monadic, monad, base[expr]) {
+				right = apply_with(ctx, base, monad.right, left, right);
 				left = -1;
-				expr = base[expr].as.args.callee;
+				expr = monad.func;
 				continue;
 			}
 
-			break;case Node_Dyad: {
-				Node_Handle new_left  = apply_with(ctx, base, base[expr].as.args.left,  left, right);
-				Node_Handle new_right = apply_with(ctx, base, base[expr].as.args.right, left, right);
+			MATCH_AST(Dyadic, dyad, base[expr]) {
+				Node_Handle new_left  = apply_with(ctx, base, dyad.left,  left, right);
+				Node_Handle new_right = apply_with(ctx, base, dyad.right, left, right);
 				left  = new_left;
 				right = new_right;
-				expr  = base[expr].as.args.callee;
+				expr  = dyad.func;
 				continue;
 			}
 
-			break;case Node_Assign: {
+			break;case Ast_Type_Assignment: {
 
 				assert(false && "unimplemented");
 				unreachable();
@@ -233,8 +226,8 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 
 				// Eval_Context new_ctx = {.scope = ctx->scope};
 
-				// Node_Handle formal_left_arg = append_node(&new_ctx, (Eval_Node){.type = Node_None});
-				// Node_Handle formal_right_arg = append_node(&new_ctx, (Eval_Node){.type = Node_None});
+				// Node_Handle formal_left_arg = append_node(&new_ctx, (IR_Node){.type = Ast_Type_None});
+				// Node_Handle formal_right_arg = append_node(&new_ctx, (IR_Node){.type = Ast_Type_None});
 
 				// bind_value = apply_with(&new_ctx, base, bind_value, formal_left_arg, formal_right_arg);
 
@@ -246,7 +239,7 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 
 				// 	assert(bind_value == (Node_Handle)new_ctx.count - 1);
 				// 	entry.value = flat_eval(&new_ctx);
-				// 	assert(entry.value.type == Node_Array);
+				// 	assert(entry.value.type == Ast_Type_Array);
 				// 	++entry.value.as.array->ref_count;
 				// 	scope_insert(ctx->scope, entry);
 
@@ -255,7 +248,7 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 
 				// } else {
 				// 	assert(false);
-				// 	entry.eval_tree.nodes = realloc(new_ctx.nodes, sizeof(Eval_Node) * new_ctx.count);
+				// 	entry.eval_tree.nodes = realloc(new_ctx.nodes, sizeof(IR_Node) * new_ctx.count);
 				// 	entry.eval_tree.count = new_ctx.count;
 
 				// 	assert(false && "assigning functions is not implemented yet");
@@ -271,41 +264,37 @@ Node_Handle apply(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr) {
 	return result;
 }
 
-Eval_Node eval_once(Eval_Context *ctx, Eval_Node *partial_results, Node_Handle expr) {
+IR_Node eval_once(Eval_Context *ctx, IR_Node *partial_results, Node_Handle expr) {
 	switch(ctx->nodes[expr].type) {
-		break;case Node_None:
+		break;case IR_Type_None:
 			return ctx->nodes[expr];
 
-		break;case Node_Array:
+		break;case IR_Type_Array:
 			ctx->nodes[expr].as.array->ref_count ++;
 			return ctx->nodes[expr];
 
-		break;case Node_Function:
+		break;case IR_Type_Function:
 			return ctx->nodes[expr];
 
-		break;case Node_Identifier:
-			assert(false && "Unhandled identifier in eval");
-			unreachable();
-
-		break;case Node_Monad: {
+		break;case IR_Type_Monad: {
 			// assume everything needed is already evaluated;
-			Eval_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
-			Eval_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
-			assert(func->type == Node_Function);
-			Eval_Node result = func->as.function(NULL, right);
+			IR_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
+			IR_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
+			assert(func->type == IR_Type_Function);
+			IR_Node result = func->as.function(NULL, right);
 			result.ref_count = ctx->nodes[expr].ref_count;
 			release_node(func);
 			release_node(right);
 			return result;
 		}
 
-		break;case Node_Dyad: {
+		break;case IR_Type_Dyad: {
 			// assume everything needed is already evaluated;
-			Eval_Node *left  = &partial_results[ctx->nodes[expr].as.args.left  ];
-			Eval_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
-			Eval_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
-			assert(func->type == Node_Function);
-			Eval_Node result = func->as.function(left, right);
+			IR_Node *left  = &partial_results[ctx->nodes[expr].as.args.left  ];
+			IR_Node *func  = &partial_results[ctx->nodes[expr].as.args.callee];
+			IR_Node *right = &partial_results[ctx->nodes[expr].as.args.right ];
+			assert(func->type == IR_Type_Function);
+			IR_Node result = func->as.function(left, right);
 			result.ref_count = ctx->nodes[expr].ref_count;
 			release_node(left);
 			release_node(func);
@@ -313,7 +302,7 @@ Eval_Node eval_once(Eval_Context *ctx, Eval_Node *partial_results, Node_Handle e
 			return result;
 		}
 
-		break;case Node_Assign: {
+		break;case IR_Type_Assign: {
 			assert(false && "assign unhandled in application");
 			unreachable();
 		}
@@ -324,15 +313,15 @@ Eval_Node eval_once(Eval_Context *ctx, Eval_Node *partial_results, Node_Handle e
 	}
 }
 
-Eval_Node flat_eval(Eval_Context *ctx) {
-	Eval_Node partial_results[ctx->count];
+IR_Node flat_eval(Eval_Context *ctx) {
+	IR_Node partial_results[ctx->count];
 
 	for(Node_Handle idx = 0; idx < (Node_Handle) ctx->count; ++idx) {
 		partial_results[idx] = eval_once(ctx, partial_results, idx);
 	}
 
 	for(Node_Handle idx = 0; idx < (Node_Handle) ctx->count - 1; ++idx) {
-		assert(partial_results[idx].type == Node_None);
+		assert(partial_results[idx].type == IR_Type_None);
 	}
 
 	return partial_results[ctx->count - 1];

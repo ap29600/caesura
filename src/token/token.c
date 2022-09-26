@@ -9,14 +9,14 @@
 Token_Type classify(Scanner *scanner) {
 	switch(peek(scanner)) {
 		break;case '\0':
-			return Empty;
+			return Token_Type_Empty;
 
 		break;case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
-			return Float;
+			return Token_Type_Float;
 
 		break;case '.': case ',': case '(': case ')': case ':': case '!':
-			return Operator;
+			return Token_Type_Operator;
 
 		break;case '-': case '+': {
 			Scanner tmp = *scanner;
@@ -24,15 +24,15 @@ Token_Type classify(Scanner *scanner) {
 			switch(peek(&tmp)) {
 				break;case '0': case '1': case '2': case '3': case '4':
 					case '5': case '6': case '7': case '8': case '9':
-					return Float;
+					return Token_Type_Float;
 
 				break;default:
-					return Identifier;
+					return Token_Type_Identifier;
 			}
 		}
 
 		break;default:
-			return Identifier;
+			return Token_Type_Identifier;
 	}
 	unreachable();
 }
@@ -74,20 +74,20 @@ Token next_token(Scanner *scanner) {
 
 	switch (classify(scanner)) {
 
-		break;case Empty: {
-			result.type = Empty;
+		break;case Token_Type_Empty: {
+			result.type = Token_Type_Empty;
 			result.is_valid = false;
 		}
 
-		break;case Int:
-		[[fallthrough]];case Float: {
+		break;case Token_Type_Int:
+		[[fallthrough]];case Token_Type_Float: {
 			f64 value = read_f64(scanner);
 			ensure_total_read(scanner, delimiters);
 			if ((value - (i64)value) != 0) {
-				result.type     = Float;
+				result.type     = Token_Type_Float;
 				result.f64value = value;
 			} else {
-				result.type = Int;
+				result.type = Token_Type_Int;
 				result.i64value = (i64)value;
 			}
 
@@ -101,8 +101,8 @@ Token next_token(Scanner *scanner) {
 			}
 		}
 
-		break;case Operator: {
-			result.type = Operator;
+		break;case Token_Type_Operator: {
+			result.type = Token_Type_Operator;
 			switch (next(scanner)) {
 				break;case ',':
 					result.op = List;
@@ -126,8 +126,8 @@ Token next_token(Scanner *scanner) {
 			}
 		}
 
-		break;case Identifier: {
-			result.type = Identifier;
+		break;case Token_Type_Identifier: {
+			result.type = Token_Type_Identifier;
 			for (; peek(scanner) != '\0' && !get_bit(delimiters, peek(scanner)); next(scanner)){};
 			result.text = (String){
 				.begin = &scanner->source.begin[result.loc.byte],
