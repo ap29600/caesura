@@ -224,11 +224,16 @@ Ast parse_expressions(Scanner *state) {
 		}
 
 		if (enlisting) {
-			assert(tok.type == Float);
 			assert(has_active_locals(&expr_state, 1));
 			Ast_Node *node = &result.nodes[last_active_local(&expr_state)];
 			assert(node->type == Node_Array);
-			node->as.array = array_append_elem(&tok.value, node->as.array, Type_Float);
+			switch(tok.type) {
+				break;case Float: node->as.array = array_append_elem(&tok.f64value, node->as.array, Type_Float);
+				break;case Int:   node->as.array = array_append_elem(&tok.i64value, node->as.array, Type_Int);
+				break;default:
+					assert(false);
+					unreachable();
+			}
 			enlisting = false;
 			continue;
 		}
@@ -236,11 +241,18 @@ Ast parse_expressions(Scanner *state) {
 		switch(tok.type) {
 			break;case Empty:
 
+			break;case Int:
+				append_handle(&expr_state.active_nodes,
+					append_ast_node(&result, (Ast_Node){
+						.type = Node_Array,
+						.as.array = make_array(&tok.i64value, 1, Type_Int),
+					})
+				);
 			break;case Float:
 				append_handle(&expr_state.active_nodes,
 					append_ast_node(&result, (Ast_Node){
 						.type = Node_Array,
-						.as.array = make_array(&tok.value, 1, Type_Float),
+						.as.array = make_array(&tok.f64value, 1, Type_Float),
 					})
 				);
 

@@ -37,6 +37,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 				break;case Type_Generic_L: assert(false);
 				break;case Type_Generic_R: assert(false);
 				break;case Type_Float: {
+					dest.begin += fmt_cstr(dest, "[f64]", info);
 					f64 *data = src.as.array->data;
 					for (u64 i = 0; i < src.as.array->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
@@ -45,6 +46,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 				}
 
 				break;case Type_Int: {
+					dest.begin += fmt_cstr(dest, "[i64]", info);
 					i64 *data = src.as.array->data;
 					for (u64 i = 0; i < src.as.array->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
@@ -53,6 +55,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 				}
 
 				break;case Type_Char: {
+					dest.begin += fmt_cstr(dest, "[char]", info);
 					String data = {.begin = src.as.array->data, .end = (char*)src.as.array->data + src.as.array->shape};
 					dest.begin += fmt_rune(dest, '"', info);
 					dest.begin += fmt_str(dest, data, info);
@@ -60,6 +63,7 @@ i64 fmt_eval_node (Byte_Slice dest, Eval_Node src, Fmt_Info info) {
 				}
 
 				break;case Type_Bool: {
+					dest.begin += fmt_cstr(dest, "[bool]", info);
 					bool *data = src.as.array->data;
 					for (u64 i = 0; i < src.as.array->shape; ++i) {
 						if (i > 0) { dest.begin += fmt_rune(dest, ',', info); }
@@ -130,9 +134,14 @@ i64 fmt_token(Byte_Slice dest, Token tok, Fmt_Info info) {
 	}
 
 	switch (tok.type) {
+		break;case Int:
+			dest.begin += fmt_cstr(dest, "i64: " COL_GRN_F, info);
+			dest.begin += fmt_i64(dest, tok.i64value, info);
+			dest.begin += fmt_cstr(dest, RESET " ", info);
+
 		break;case Float:
 			dest.begin += fmt_cstr(dest, "f64: " COL_GRN_F, info);
-			dest.begin += fmt_f64(dest, tok.value, info);
+			dest.begin += fmt_f64(dest, tok.f64value, info);
 			dest.begin += fmt_cstr(dest, RESET " ", info);
 
 		break;case Operator:

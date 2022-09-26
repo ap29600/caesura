@@ -8,6 +8,7 @@
 
 typedef enum {
 	Empty,
+	Int,
 	Float,
 	Operator,
 	Identifier,
@@ -31,7 +32,8 @@ typedef struct {
 	union {
 		String text;
 		Operator_t op;
-		f64 value;
+		f64 f64value;
+		i64 i64value;
 	};
 	Location loc;
 	bool is_valid;

@@ -24,6 +24,14 @@ static const u64 sizes[Types_Count] = {
 	[Type_Float] = sizeof(f64),
 };
 
+static const u64 ranges[Types_Count] = {
+	[Type_None]  = 0,
+	[Type_Bool]  = 1,
+	[Type_Char]  = 8,
+	[Type_Int]   = 64,
+	[Type_Float] = 2048,
+};
+
 Array* make_array(const void* data, u64 shape, Element_Type type) {
 	Array *result = malloc(sizeof(Array) + sizes[type] * shape);
 
@@ -64,13 +72,50 @@ Array *clone_array(Array *array) {
 
 Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
 	assert(array);
-	assert(array->type == type && "type mismatch");
 	assert(array->ref_count == 1 && "permission to modify");
 	assert((u8*)array->data == ((u8*)array + sizeof(Array)) && "single allocation");
+	
+	u8 buffer[8] = {0};
+	Element_Type supertype = ranges[array->type] >= ranges[type] ? array->type : type;
+	array = array_cast(array, supertype);
 
-	array = realloc(array, sizeof(Array) + (array->shape+1) * sizes[type]);
+	if (supertype != type) {
+		switch(supertype) {
+			break;case Type_Float:
+				switch(type) {
+					break;case Type_Int: *(f64*)buffer = *(i64*)elem;
+					break;case Type_Char: *(f64*)buffer = *(char*)elem;
+					break;case Type_Bool: *(f64*)buffer = *(bool*)elem;
+					break;default:
+						assert(false);
+						unreachable();
+				}
+			break;case Type_Int:
+				switch(type) {
+					break;case Type_Char: *(i64*)buffer = *(char*)elem;
+					break;case Type_Bool: *(i64*)buffer = *(bool*)elem;
+					break;default:
+						assert(false);
+						unreachable();
+				}
+			break;case Type_Char:
+				switch(type) {
+					break;case Type_Bool: *(i64*)buffer = *(bool*)elem;
+					break;default:
+						assert(false);
+						unreachable();
+				}
+			break;default:
+				assert(false);
+				unreachable();
+		}
+	} else {
+		memcpy(buffer, elem, sizes[supertype]);
+	}
+
+	array = realloc(array, sizeof(Array) + (array->shape+1) * sizes[supertype]);
 	array->data = ((u8*)array) + sizeof(Array);
-	memcpy(((u8*)array->data) + array->shape * sizes[type], elem, sizes[type]);
+	memcpy(((u8*)array->data) + array->shape * sizes[supertype], buffer, sizes[supertype]);
 	array->shape += 1;
 	return array;
 }

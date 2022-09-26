@@ -79,10 +79,17 @@ Token next_token(Scanner *scanner) {
 			result.is_valid = false;
 		}
 
-		break;case Float: {
-			result.type = Float;
-			result.value = read_f64(scanner);
+		break;case Int:
+		[[fallthrough]];case Float: {
+			f64 value = read_f64(scanner);
 			ensure_total_read(scanner, delimiters);
+			if ((value - (i64)value) != 0) {
+				result.type     = Float;
+				result.f64value = value;
+			} else {
+				result.type = Int;
+				result.i64value = (i64)value;
+			}
 
 			if (scanner->error != None) {
 				while(peek(scanner) && !get_bit(delimiters, peek(scanner))) next(scanner);
@@ -121,7 +128,7 @@ Token next_token(Scanner *scanner) {
 
 		break;case Identifier: {
 			result.type = Identifier;
-			while(peek(scanner) != '\0' && !get_bit(delimiters, peek(scanner))) next(scanner);
+			for (; peek(scanner) != '\0' && !get_bit(delimiters, peek(scanner)); next(scanner)){};
 			result.text = (String){
 				.begin = &scanner->source.begin[result.loc.byte],
 				.end =   &scanner->source.begin[scanner->location.byte]
