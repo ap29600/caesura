@@ -179,13 +179,13 @@ Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr
 					}
 				}
 
-				format_fprintln(stderr, "Error: {cstr} matches {u64} rules, but none type check",
+				format_fprintln(stderr, "Error: `{cstr}` matches {u64} rules, but none type check",
 					identifier.begin,
 					guard
 				);
 				format_fprintln(stderr, "\ttypes are: {type}, {type}",
-					ctx->nodes[left].eval_type,
-					ctx->nodes[right].eval_type
+					left >= 0 ? ctx->nodes[left].eval_type : Type_None,
+					right >= 0 ? ctx->nodes[right].eval_type : Type_None
 				);
 				format_fprintln(stderr, "candidates are:");
 				for(u64 i = 0; i < guard && entry_cmp(&matches[i], &key) == 0; ++i) {

@@ -9,67 +9,67 @@
 #include "src/token/token.h"
 
 typedef struct {
-	Vector active_nodes;
-	Vector parens;
-	Vector dyad_operators;
-	Vector monad_operators;
+	Node_Handle *active_nodes;
+	Node_Handle *parens;
+	Node_Handle *dyad_operators;
+	Node_Handle *monad_operators;
 } Expression_Parser_State;
 
 static bool has_active_locals(Expression_Parser_State *state, u64 count) {
-	if (state->active_nodes.count < count) { return false; }
-	if (state->parens.count == 0) { return true; }
-	Node_Handle const local = vec_array(&state->active_nodes, Node_Handle)[state->active_nodes.count - count];
-	Node_Handle const last_paren = vec_back(&state->parens, Node_Handle);
+	if (Vec_size(state->active_nodes) < count) { return false; }
+	if (Vec_size(state->parens) == 0) { return true; }
+	Node_Handle const local = state->active_nodes[Vec_size(state->active_nodes) - count];
+	Node_Handle const last_paren = Vec_back(state->parens);
 	return  local >= last_paren;
 }
 
 static Node_Handle last_active_local(Expression_Parser_State *state) {
 	if (has_active_locals(state, 1)) {
-		return vec_back(&state->active_nodes, Node_Handle);
+		return Vec_back(state->active_nodes);
 	}
 	return -1;
 }
 
 static Node_Handle pop_active_local(Expression_Parser_State *state) {
 	if (has_active_locals(state, 1)) {
-		return vec_pop(&state->active_nodes, Node_Handle);
+		return Vec_pop_back(&state->active_nodes);
 	}
 	return -1;
 }
 
 static void desugar_dyad_operator(Expression_Parser_State *state, Ast *result) {
-	Vector *const nodes = &state->active_nodes;
-	Vector *const dyads = &state->dyad_operators;
-	Node_Handle guard = vec_back_or_default(&state->parens, 0, Node_Handle);
+	// Node_Handle *const nodes = state->active_nodes;
+	// Node_Handle *const dyads = state->dyad_operators;
+	Node_Handle const guard = Vec_back_or(state->parens, 0);
 
 	u64 count = 0;
-	for (;vec_back_or_default(dyads, -1, Node_Handle) >= guard ; ++count) {
-		vec_pop(dyads, Node_Handle);
+	for (; Vec_back_or(state->dyad_operators, -1) >= guard ; ++count) {
+		Vec_pop_back(&state->dyad_operators);
 	}
 
-	Node_Handle *scoped_dyads = vec_end(dyads, Node_Handle);
+	Node_Handle *scoped_dyads = Vec_end(state->dyad_operators);
 	u64 right_arg_pos = 0;
 	for(u64 i = 0; i < count; ++i) {
 		Node_Handle const dyad = scoped_dyads[i];
 
-		for(; vec_array(nodes, Node_Handle)[right_arg_pos] < dyad; ++right_arg_pos) {
-			if (right_arg_pos+1 >= state->active_nodes.count) { assert(false&&"lone `:`"); }
+		for(; state->active_nodes[right_arg_pos] < dyad; ++right_arg_pos) {
+			if (right_arg_pos + 1 >= Vec_size(state->active_nodes)) { assert(false&&"lone `:`"); }
 		}
 
 		// only accept shapes like `.. a:b ..`
-		assert(right_arg_pos > 0 && vec_array(nodes, Node_Handle)[right_arg_pos - 1] >= guard);
-		Node_Handle const left_arg  = vec_array(nodes, Node_Handle)[right_arg_pos - 1];
-		Node_Handle const right_arg = vec_array(nodes, Node_Handle)[right_arg_pos];
+		assert(right_arg_pos > 0 && state->active_nodes[right_arg_pos - 1] >= guard);
+		Node_Handle const left_arg  = state->active_nodes[right_arg_pos - 1];
+		Node_Handle const right_arg = state->active_nodes[right_arg_pos];
 
 		// expect two dummy nodes to overwrite
-		assert(vec_array(&result->nodes, Ast_Node)[dyad].type == Ast_Type_None);
-		assert(vec_array(&result->nodes, Ast_Node)[dyad + 1].type == Ast_Type_None);
+		assert(result->nodes[dyad].type == Ast_Type_None);
+		assert(result->nodes[dyad + 1].type == Ast_Type_None);
 
-		vec_array(&result->nodes, Ast_Node)[dyad] = (Ast_Node){ 
-			.type= Ast_Type_Identifier, 
+		result->nodes[dyad] = (Ast_Node){
+			.type= Ast_Type_Identifier,
 			.as_Identifier = {"->"}
 		};
-		vec_array(&result->nodes, Ast_Node)[dyad + 1] = (Ast_Node){ 
+		result->nodes[dyad + 1] = (Ast_Node){
 			.type = Ast_Type_Dyadic, .as_Dyadic = {
 				.left = left_arg,
 				.func = right_arg,
@@ -77,45 +77,43 @@ static void desugar_dyad_operator(Expression_Parser_State *state, Ast *result) {
 			}
 		};
 
-		vec_array(nodes, Node_Handle)[right_arg_pos - 1] = dyad + 1;
-		vec_remove(nodes, right_arg_pos, Node_Handle);
+		state->active_nodes[right_arg_pos - 1] = dyad + 1;
+		Vec_remove(&state->active_nodes, right_arg_pos);
 	}
 }
 
 static void desugar_monad_operator(Expression_Parser_State *state, Ast *result) {
-	Vector *const nodes = &state->active_nodes;
-	Vector *const monads = &state->monad_operators;
-	Node_Handle const guard = vec_back_or_default(&state->parens, 0, Node_Handle);
+	Node_Handle const guard = Vec_back_or(state->parens, 0);
 
 	u64 count = 0;
-	for (; vec_back_or_default(monads, -1, Node_Handle) >= guard; ++count) {
-		vec_pop(monads, Node_Handle);
+	for (; Vec_back_or(state->monad_operators, -1) >= guard; ++count) {
+		Vec_pop_back(&state->monad_operators);
 	}
 
-	Node_Handle *const scoped_monads = vec_end(monads, Node_Handle);
+	Node_Handle *const scoped_monads = Vec_end(state->monad_operators);
 	u64 right_arg_pos = 0;
 	for(u64 i = 0; i < count; ++i) {
 		Node_Handle const monad = scoped_monads[i];
 
-		for(; vec_array(nodes, Node_Handle)[right_arg_pos] < monad; ++right_arg_pos) {
-			if (right_arg_pos + 1 >= state->active_nodes.count) { assert(false&&"lone `:`"); }
+		for(; state->active_nodes[right_arg_pos] < monad; ++right_arg_pos) {
+			if (right_arg_pos + 1 >= Vec_size(state->active_nodes)) { assert(false&&"lone `:`"); }
 		}
 
 		// only accept shapes like `.. a.b ..`
-		assert (right_arg_pos > 0 && vec_array(nodes, Node_Handle)[right_arg_pos - 1] >= guard);
-		Node_Handle const left_arg  = vec_array(nodes, Node_Handle)[right_arg_pos - 1];
-		Node_Handle const right_arg = vec_array(nodes, Node_Handle)[right_arg_pos];
+		assert (right_arg_pos > 0 &&  state->active_nodes[right_arg_pos - 1] >= guard);
+		Node_Handle const left_arg  = state->active_nodes[right_arg_pos - 1];
+		Node_Handle const right_arg = state->active_nodes[right_arg_pos];
 
 		// expect one dummy node to overwrite
 		// assert(result->nodes[monad].type == Ast_Type_None);
-		assert(vec_array(&result->nodes, Ast_Node)[monad].type == Ast_Type_None);
-		vec_array(&result->nodes, Ast_Node)[monad] = (Ast_Node){ .type = Ast_Type_Monadic, .as_Monadic = {
+		assert(result->nodes[monad].type == Ast_Type_None);
+		result->nodes[monad] = (Ast_Node){ .type = Ast_Type_Monadic, .as_Monadic = {
 			.func = left_arg,
 			.right = right_arg,
 		}};
 
-		vec_array(nodes, Node_Handle)[right_arg_pos - 1] = monad;
-		vec_remove(nodes, right_arg_pos, Node_Handle);
+		state->active_nodes[right_arg_pos - 1] = monad;
+		Vec_remove(&state->active_nodes, right_arg_pos);
 	}
 }
 
@@ -133,8 +131,8 @@ static void apply_functions(Expression_Parser_State *state, Ast *result) {
 			.type = Ast_Type_Dyadic,
 			.as_Dyadic = { .left = left, .func = func, .right = right, },
 		};
-		Node_Handle const handle = vec_push(&result->nodes, node, Ast_Node);
-		vec_push(&state->active_nodes, handle, Node_Handle);
+		Node_Handle const handle = Vec_push_back(&result->nodes, node);
+		Vec_push_back(&state->active_nodes, handle);
 	}
 
 	for (; has_active_locals(state, 2);) {
@@ -144,8 +142,8 @@ static void apply_functions(Expression_Parser_State *state, Ast *result) {
 			.type = Ast_Type_Monadic,
 			.as_Monadic = { .func = func, .right = right, },
 		};
-		Node_Handle const handle = vec_push(&result->nodes, node, Ast_Node);
-		vec_push(&state->active_nodes, handle, Node_Handle);
+		Node_Handle const handle = Vec_push_back(&result->nodes, node);
+		Vec_push_back(&state->active_nodes, handle);
 	}
 }
 
@@ -168,7 +166,7 @@ Ast parse_expressions(Scanner *state) {
 
 		if (enlisting) {
 			assert(has_active_locals(&expr_state, 1));
-			Ast_Node *const node = &vec_array(&result.nodes, Ast_Node)[last_active_local(&expr_state)];
+			Ast_Node *const node = &result.nodes[last_active_local(&expr_state)];
 			assert(node->type == Ast_Type_Array_Ptr);
 			switch(tok.type) {
 				break;case Token_Type_Float: {
@@ -196,8 +194,8 @@ Ast parse_expressions(Scanner *state) {
 					.type = Ast_Type_Array_Ptr,
 					.as_Array_Ptr = make_array(&tok.i64value, 1, Type_Int),
 				};
-				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
-				vec_push(&expr_state.active_nodes, handle, Node_Handle);
+				Node_Handle const handle = Vec_push_back(&result.nodes, node);
+				Vec_push_back(&expr_state.active_nodes, handle);
 			}
 
 			break;case Token_Type_Float: {
@@ -205,16 +203,16 @@ Ast parse_expressions(Scanner *state) {
 					.type = Ast_Type_Array_Ptr,
 					.as_Array_Ptr = make_array(&tok.f64value, 1, Type_Float),
 				};
-				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
-				vec_push(&expr_state.active_nodes, handle, Node_Handle);
+				Node_Handle const handle = Vec_push_back(&result.nodes, node);
+				Vec_push_back(&expr_state.active_nodes, handle);
 			}
 
 			break;case Token_Type_Identifier: {
 				Ast_Node node = { .type = Ast_Type_Identifier };
 				assert(string_len(tok.text) <= 15);
 				strncpy(node.as_Identifier.begin, tok.text.begin, string_len(tok.text));
-				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
-				vec_push(&expr_state.active_nodes, handle, Node_Handle);
+				Node_Handle const handle = Vec_push_back(&result.nodes, node);
+				Vec_push_back(&expr_state.active_nodes, handle);
 			}
 
 			break;case Token_Type_Operator: {
@@ -224,33 +222,33 @@ Ast parse_expressions(Scanner *state) {
 					}
 
 					break;case LParen: {
-						vec_push(&expr_state.parens, result.nodes.count, Node_Handle);
+						Vec_push_back(&expr_state.parens, Vec_size(result.nodes));
 					}
 
 					break;case RParen: {
-						assert(expr_state.parens.count > 0);
+						assert(Vec_size(expr_state.parens) > 0);
 						apply_functions(&expr_state, &result);
-						vec_pop(&expr_state.parens, Node_Handle);
+						Vec_pop_back(&expr_state.parens);
 					}
 
 					break;case Assign: {
-						assert(expr_state.parens.count == 0); // must be at toplevel
-						assert(expr_state.active_nodes.count == 1); // must have something to bind to
-						binding_name = vec_pop(&expr_state.active_nodes, Node_Handle);
-						assert(vec_array(&result.nodes, Ast_Node)[binding_name].type == Ast_Type_Identifier);
+						assert(Vec_size(expr_state.parens) == 0); // must be at toplevel
+						assert(Vec_size(expr_state.active_nodes) == 1); // must have something to bind to
+						binding_name = Vec_pop_back(&expr_state.active_nodes);
+						assert(result.nodes[binding_name].type == Ast_Type_Identifier);
 					}
 
 					break;case Dyad: {
 						// dummy nodes for '->' and 'dyad'
-						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
-						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
-						vec_push(&expr_state.dyad_operators, result.nodes.count - 2, Node_Handle);
+						Vec_push_back(&result.nodes, (Ast_Node){0});
+						Vec_push_back(&result.nodes, (Ast_Node){0});
+						Vec_push_back(&expr_state.dyad_operators, Vec_size(result.nodes) - 2);
 					}
 
 					break;case Monad: {
 						// dummy node for 'monad'
-						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
-						vec_push(&expr_state.monad_operators, result.nodes.count - 1, Node_Handle);
+						Vec_push_back(&result.nodes, (Ast_Node){0});
+						Vec_push_back(&expr_state.monad_operators, Vec_size(result.nodes) - 1);
 					}
 
 					break;default: {
@@ -261,30 +259,30 @@ Ast parse_expressions(Scanner *state) {
 		}
 	}
 
-	assert(expr_state.parens.count == 0);
+	assert(Vec_size(expr_state.parens) == 0);
 	apply_functions(&expr_state, &result);
 
-	if (expr_state.active_nodes.count != 0) {
-		result.parent = vec_array(&expr_state.active_nodes, Node_Handle)[0];
+	if (Vec_size(expr_state.active_nodes) != 0) {
+		result.parent = expr_state.active_nodes[0];
 
 		if (binding_name >= 0) {
 			Ast_Node const node = {
 				.type = Ast_Type_Assignment,
 				.as_Assignment = {
 					.left = binding_name,
-					.right = vec_array(&expr_state.active_nodes, Node_Handle)[0],
+					.right = expr_state.active_nodes[0],
 				},
 			};
-			result.parent = vec_push(&result.nodes, node, Ast_Node);
+			result.parent = Vec_push_back(&result.nodes, node);
 		}
 	} else {
 		result.parent = -1;
 	}
 
-	vec_delete(&expr_state.active_nodes);
-	vec_delete(&expr_state.parens);
-	vec_delete(&expr_state.dyad_operators);
-	vec_delete(&expr_state.monad_operators);
+	Vec_delete(&expr_state.active_nodes);
+	Vec_delete(&expr_state.parens);
+	Vec_delete(&expr_state.dyad_operators);
+	Vec_delete(&expr_state.monad_operators);
 
 	return result;
 }

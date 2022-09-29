@@ -39,7 +39,7 @@ i32 main () {
 		Scanner scanner = { .source = src, .location.fname = "stdin" };
 
 		Ast ast = parse_expressions(&scanner);
-		apply(&ctx, vec_array(&ast.nodes, Ast_Node), ast.parent);
+		apply(&ctx, ast.nodes, ast.parent);
 		delete_ast(&ast);
 
 		IR_Node result = flat_eval(&ctx);

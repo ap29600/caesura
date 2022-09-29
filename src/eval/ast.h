@@ -36,7 +36,7 @@ struct Ast_Node {
 };
 
 typedef struct {
-	Vector nodes;
+	Ast_Node *nodes;
 	//Ast_Node *nodes;
 	//u64 count;
 	//u64 cap;
