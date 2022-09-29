@@ -3,6 +3,7 @@
 
 #include "lib/format/types.h"
 #include "lib/string/types.h"
+#include "lib/vector/vector.h"
 
 #include "common.h"
 
@@ -35,9 +36,10 @@ struct Ast_Node {
 };
 
 typedef struct {
-	Ast_Node *nodes;
-	u64 count;
-	u64 cap;
+	Vector nodes;
+	//Ast_Node *nodes;
+	//u64 count;
+	//u64 cap;
 	Node_Handle parent;
 } Ast;
 

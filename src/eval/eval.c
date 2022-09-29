@@ -98,6 +98,7 @@ Element_Type dyadic_typecheck(Lookup_Entry *entry, Element_Type left, Element_Ty
 Node_Handle apply_with(Eval_Context *ctx, const Ast_Node *base, Node_Handle expr, Node_Handle left, Node_Handle right) {
 	// outer loop for TCO
 	// TODO: use a stack for recursion
+	assert(expr >= 0);
 	while (true) {
 		switch (base[expr].type) {
 			break;case Ast_Type_None:

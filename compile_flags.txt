@@ -1,5 +1,4 @@
 -xc
--Wpedantic
 -Werror
 -Wimplicit
 -Wall

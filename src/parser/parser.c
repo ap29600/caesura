@@ -1,171 +1,121 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "lib/scanner/module.h"
+#include "lib/vector/vector.h"
 
 #include "parser.h"
 
 #include "src/formats/formats.h"
 #include "src/token/token.h"
 
-
-static Node_Handle append_ast_node(Ast *ast, Ast_Node node) {
-	if (ast->count >= ast->cap) {
-		ast->cap = ast->cap == 0 ? 8 : (ast->cap * 2);
-		ast->nodes = realloc(ast->nodes, ast->cap * sizeof(Ast_Node));
-	}
-
-	ast->nodes[ast->count] = node;
-	return ast->count++;
-}
-
 typedef struct {
-	Node_Handle *handles;
-	u64 count;
-	u64 cap;
-} Handle_Vector;
-
-static void append_handle(Handle_Vector *vec, Node_Handle handle) {
-	if (vec->count >= vec->cap) {
-		vec->cap = vec->cap == 0 ? 8 : (vec->cap * 2);
-		vec->handles = realloc(vec->handles, vec->cap * sizeof(Node_Handle));
-	}
-
-	vec->handles[vec->count] = handle;
-	++vec->count;
-}
-
-static void insert_handle_at(Handle_Vector *vec, Node_Handle handle, u64 at) {
-	assert(at <= vec->count);
-
-	if (vec->count >= vec->cap) {
-		vec->cap = vec->cap == 0 ? 8 : (vec->cap * 2);
-		vec->handles = realloc(vec->handles, vec->cap * sizeof(Node_Handle));
-	}
-
-	++vec->count;
-	for(u64 i = vec->count-1; i > at; --i) {
-		vec->handles[i] = vec->handles[i-1];
-	}
-
-	vec->handles[at] = handle;
-}
-
-static void remove_handle_at(Handle_Vector *vec, u64 at) {
-	assert(at < vec->count);
-
-	--vec->count;
-	for(u64 i = at; i < vec->count; ++i) {
-		vec->handles[i] = vec->handles[i+1];
-	}
-}
-
-static Node_Handle pop_handle(Handle_Vector *vec) {
-	return vec->count > 0 ? vec->handles[--vec->count] : -1;
-}
-
-static Node_Handle peek_handle(Handle_Vector *vec) {
-	return vec->count > 0 ? vec->handles[vec->count-1] : -1;
-}
-
-typedef struct {
-	Handle_Vector active_nodes;
-	Handle_Vector parens;
-	Handle_Vector dyad_operators;
-	Handle_Vector monad_operators;
+	Vector active_nodes;
+	Vector parens;
+	Vector dyad_operators;
+	Vector monad_operators;
 } Expression_Parser_State;
-
 
 static bool has_active_locals(Expression_Parser_State *state, u64 count) {
 	if (state->active_nodes.count < count) { return false; }
 	if (state->parens.count == 0) { return true; }
-	return state->active_nodes.handles[state->active_nodes.count - count] >= state->parens.handles[state->parens.count - 1];
+	Node_Handle const local = vec_array(&state->active_nodes, Node_Handle)[state->active_nodes.count - count];
+	Node_Handle const last_paren = vec_back(&state->parens, Node_Handle);
+	return  local >= last_paren;
 }
 
 static Node_Handle last_active_local(Expression_Parser_State *state) {
 	if (has_active_locals(state, 1)) {
-		return state->active_nodes.handles[state->active_nodes.count - 1];
+		return vec_back(&state->active_nodes, Node_Handle);
 	}
 	return -1;
 }
 
 static Node_Handle pop_active_local(Expression_Parser_State *state) {
 	if (has_active_locals(state, 1)) {
-		return state->active_nodes.handles[-- state->active_nodes.count];
+		return vec_pop(&state->active_nodes, Node_Handle);
 	}
 	return -1;
 }
 
 static void desugar_dyad_operator(Expression_Parser_State *state, Ast *result) {
-	Node_Handle guard = peek_handle(&state->parens);
-	if (guard == -1) { guard = 0; } // pretend expr starts with '('
+	Vector *const nodes = &state->active_nodes;
+	Vector *const dyads = &state->dyad_operators;
+	Node_Handle guard = vec_back_or_default(&state->parens, 0, Node_Handle);
 
 	u64 count = 0;
-	while (peek_handle(&state->dyad_operators) >= guard) {
-		++count;
-		pop_handle(&state->dyad_operators);
+	for (;vec_back_or_default(dyads, -1, Node_Handle) >= guard ; ++count) {
+		vec_pop(dyads, Node_Handle);
 	}
 
-	Node_Handle *scoped_dyads = state->dyad_operators.handles + state->dyad_operators.count;
+	Node_Handle *scoped_dyads = vec_end(dyads, Node_Handle);
 	u64 right_arg_pos = 0;
 	for(u64 i = 0; i < count; ++i) {
-		Node_Handle dyad = scoped_dyads[i];
+		Node_Handle const dyad = scoped_dyads[i];
 
-		for(; state->active_nodes.handles[right_arg_pos] < dyad; ++right_arg_pos) {
+		for(; vec_array(nodes, Node_Handle)[right_arg_pos] < dyad; ++right_arg_pos) {
 			if (right_arg_pos+1 >= state->active_nodes.count) { assert(false&&"lone `:`"); }
 		}
 
 		// only accept shapes like `.. a:b ..`
-		assert (right_arg_pos>0 && state->active_nodes.handles[right_arg_pos-1]>=guard);
-		Node_Handle left_arg  = state->active_nodes.handles[right_arg_pos - 1];
-		Node_Handle right_arg = state->active_nodes.handles[right_arg_pos];
+		assert(right_arg_pos > 0 && vec_array(nodes, Node_Handle)[right_arg_pos - 1] >= guard);
+		Node_Handle const left_arg  = vec_array(nodes, Node_Handle)[right_arg_pos - 1];
+		Node_Handle const right_arg = vec_array(nodes, Node_Handle)[right_arg_pos];
 
 		// expect two dummy nodes to overwrite
-		assert(result->nodes[dyad].type == Ast_Type_None);
-		assert(result->nodes[dyad+1].type == Ast_Type_None);
+		assert(vec_array(&result->nodes, Ast_Node)[dyad].type == Ast_Type_None);
+		assert(vec_array(&result->nodes, Ast_Node)[dyad + 1].type == Ast_Type_None);
 
-		result->nodes[dyad] = (Ast_Node){ .type= Ast_Type_Identifier, .as_Identifier = {"->"} };
-		result->nodes[dyad+1] = (Ast_Node){ .type = Ast_Type_Dyadic, .as_Dyadic = {
-			.left = left_arg, .func = right_arg, .right = dyad,
-		}};
+		vec_array(&result->nodes, Ast_Node)[dyad] = (Ast_Node){ 
+			.type= Ast_Type_Identifier, 
+			.as_Identifier = {"->"}
+		};
+		vec_array(&result->nodes, Ast_Node)[dyad + 1] = (Ast_Node){ 
+			.type = Ast_Type_Dyadic, .as_Dyadic = {
+				.left = left_arg,
+				.func = right_arg,
+				.right = dyad,
+			}
+		};
 
-		state->active_nodes.handles[right_arg_pos-1] = dyad+1;
-		remove_handle_at(&state->active_nodes, right_arg_pos);
+		vec_array(nodes, Node_Handle)[right_arg_pos - 1] = dyad + 1;
+		vec_remove(nodes, right_arg_pos, Node_Handle);
 	}
 }
 
 static void desugar_monad_operator(Expression_Parser_State *state, Ast *result) {
-	Node_Handle guard = peek_handle(&state->parens);
-	if (guard == -1) { guard = 0; } // pretend expr starts with '('
+	Vector *const nodes = &state->active_nodes;
+	Vector *const monads = &state->monad_operators;
+	Node_Handle const guard = vec_back_or_default(&state->parens, 0, Node_Handle);
 
 	u64 count = 0;
-	while (peek_handle(&state->monad_operators) >= guard) {
-		++count;
-		pop_handle(&state->monad_operators);
+	for (; vec_back_or_default(monads, -1, Node_Handle) >= guard; ++count) {
+		vec_pop(monads, Node_Handle);
 	}
 
-	Node_Handle *scoped_monads = state->monad_operators.handles + state->monad_operators.count;
+	Node_Handle *const scoped_monads = vec_end(monads, Node_Handle);
 	u64 right_arg_pos = 0;
 	for(u64 i = 0; i < count; ++i) {
-		Node_Handle monad = scoped_monads[i];
+		Node_Handle const monad = scoped_monads[i];
 
-		for(; state->active_nodes.handles[right_arg_pos] < monad; ++right_arg_pos) {
-			if (right_arg_pos+1 >= state->active_nodes.count) { assert(false&&"lone `:`"); }
+		for(; vec_array(nodes, Node_Handle)[right_arg_pos] < monad; ++right_arg_pos) {
+			if (right_arg_pos + 1 >= state->active_nodes.count) { assert(false&&"lone `:`"); }
 		}
 
 		// only accept shapes like `.. a.b ..`
-		assert (right_arg_pos>0 && state->active_nodes.handles[right_arg_pos-1]>=guard);
-		Node_Handle left_arg  = state->active_nodes.handles[right_arg_pos - 1];
-		Node_Handle right_arg = state->active_nodes.handles[right_arg_pos];
+		assert (right_arg_pos > 0 && vec_array(nodes, Node_Handle)[right_arg_pos - 1] >= guard);
+		Node_Handle const left_arg  = vec_array(nodes, Node_Handle)[right_arg_pos - 1];
+		Node_Handle const right_arg = vec_array(nodes, Node_Handle)[right_arg_pos];
 
 		// expect one dummy node to overwrite
-		assert(result->nodes[monad].type == Ast_Type_None);
-
-		result->nodes[monad] = (Ast_Node){ .type = Ast_Type_Monadic, .as_Monadic = {
-			.func = left_arg, .right = right_arg,
+		// assert(result->nodes[monad].type == Ast_Type_None);
+		assert(vec_array(&result->nodes, Ast_Node)[monad].type == Ast_Type_None);
+		vec_array(&result->nodes, Ast_Node)[monad] = (Ast_Node){ .type = Ast_Type_Monadic, .as_Monadic = {
+			.func = left_arg,
+			.right = right_arg,
 		}};
 
-		state->active_nodes.handles[right_arg_pos-1] = monad;
-		remove_handle_at(&state->active_nodes, right_arg_pos);
+		vec_array(nodes, Node_Handle)[right_arg_pos - 1] = monad;
+		vec_remove(nodes, right_arg_pos, Node_Handle);
 	}
 }
 
@@ -176,41 +126,38 @@ static void apply_functions(Expression_Parser_State *state, Ast *result) {
 	desugar_monad_operator(state, result);
 
 	for (; has_active_locals(state, 3);) {
-		Node_Handle right = pop_active_local(state);
-		Node_Handle func  = pop_active_local(state);
-		Node_Handle left  = pop_active_local(state);
-		Node_Handle val = append_ast_node(
-				result, (Ast_Node){
-					.type = Ast_Type_Dyadic,
-					.as_Dyadic = { .left = left, .func = func, .right = right, },
-				});
-
-		append_handle(&state->active_nodes, val);
+		Node_Handle const right = pop_active_local(state);
+		Node_Handle const func  = pop_active_local(state);
+		Node_Handle const left  = pop_active_local(state);
+		Ast_Node const node = {
+			.type = Ast_Type_Dyadic,
+			.as_Dyadic = { .left = left, .func = func, .right = right, },
+		};
+		Node_Handle const handle = vec_push(&result->nodes, node, Ast_Node);
+		vec_push(&state->active_nodes, handle, Node_Handle);
 	}
 
 	for (; has_active_locals(state, 2);) {
-		Node_Handle right = pop_active_local(state);
-		Node_Handle func  = pop_active_local(state);
-		Node_Handle val = append_ast_node(
-				result, (Ast_Node){
-					.type = Ast_Type_Monadic,
-					.as_Monadic = { .func = func, .right = right, },
-				});
-
-		append_handle(&state->active_nodes, val);
+		Node_Handle const right = pop_active_local(state);
+		Node_Handle const func  = pop_active_local(state);
+		Ast_Node const node = {
+			.type = Ast_Type_Monadic,
+			.as_Monadic = { .func = func, .right = right, },
+		};
+		Node_Handle const handle = vec_push(&result->nodes, node, Ast_Node);
+		vec_push(&state->active_nodes, handle, Node_Handle);
 	}
 }
 
 Ast parse_expressions(Scanner *state) {
-	Ast result = {.nodes = malloc(sizeof(Ast_Node) * 8), .cap = 8, .count = 0};
-
+	Ast result = {0}; // = {.nodes = malloc(sizeof(Ast_Node) * 8), .cap = 8, .count = 0};
 	Expression_Parser_State expr_state = {0};
 
 	bool enlisting = false;
 	Node_Handle binding_name = -1;
 
 	for (; !scanner_is_empty(state); ) {
-		Token tok = next_token(state);
+		Token const tok = next_token(state);
 
 		if (tok.type == Token_Type_Empty) {
 			continue;
@@ -221,7 +168,7 @@ Ast parse_expressions(Scanner *state) {
 
 		if (enlisting) {
 			assert(has_active_locals(&expr_state, 1));
-			Ast_Node *node = &result.nodes[last_active_local(&expr_state)];
+			Ast_Node *const node = &vec_array(&result.nodes, Ast_Node)[last_active_local(&expr_state)];
 			assert(node->type == Ast_Type_Array_Ptr);
 			switch(tok.type) {
 				break;case Token_Type_Float: {
@@ -245,28 +192,29 @@ Ast parse_expressions(Scanner *state) {
 			break;case Token_Type_Empty:
 
 			break;case Token_Type_Int: {
-				append_handle(&expr_state.active_nodes,
-					append_ast_node(&result, (Ast_Node){
-						.type = Ast_Type_Array_Ptr,
-						.as_Array_Ptr = make_array(&tok.i64value, 1, Type_Int),
-					})
-				);
+				Ast_Node const node = {
+					.type = Ast_Type_Array_Ptr,
+					.as_Array_Ptr = make_array(&tok.i64value, 1, Type_Int),
+				};
+				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
+				vec_push(&expr_state.active_nodes, handle, Node_Handle);
 			}
 
 			break;case Token_Type_Float: {
-				append_handle(&expr_state.active_nodes,
-					append_ast_node(&result, (Ast_Node){
-						.type = Ast_Type_Array_Ptr,
-						.as_Array_Ptr = make_array(&tok.f64value, 1, Type_Float),
-					})
-				);
+				Ast_Node const node = {
+					.type = Ast_Type_Array_Ptr,
+					.as_Array_Ptr = make_array(&tok.f64value, 1, Type_Float),
+				};
+				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
+				vec_push(&expr_state.active_nodes, handle, Node_Handle);
 			}
 
 			break;case Token_Type_Identifier: {
 				Ast_Node node = { .type = Ast_Type_Identifier };
 				assert(string_len(tok.text) <= 15);
 				strncpy(node.as_Identifier.begin, tok.text.begin, string_len(tok.text));
-				append_handle(&expr_state.active_nodes, append_ast_node(&result, node));
+				Node_Handle const handle = vec_push(&result.nodes, node, Ast_Node);
+				vec_push(&expr_state.active_nodes, handle, Node_Handle);
 			}
 
 			break;case Token_Type_Operator: {
@@ -276,34 +224,33 @@ Ast parse_expressions(Scanner *state) {
 					}
 
 					break;case LParen: {
-						append_handle(&expr_state.parens, result.count);
+						vec_push(&expr_state.parens, result.nodes.count, Node_Handle);
 					}
 
 					break;case RParen: {
 						assert(expr_state.parens.count > 0);
 						apply_functions(&expr_state, &result);
-						pop_handle(&expr_state.parens);
+						vec_pop(&expr_state.parens, Node_Handle);
 					}
 
 					break;case Assign: {
 						assert(expr_state.parens.count == 0); // must be at toplevel
 						assert(expr_state.active_nodes.count == 1); // must have something to bind to
-						assert(pop_handle(&expr_state.active_nodes) == 0);
-						assert(result.nodes[0].type == Ast_Type_Identifier);
-						binding_name = 0;
+						binding_name = vec_pop(&expr_state.active_nodes, Node_Handle);
+						assert(vec_array(&result.nodes, Ast_Node)[binding_name].type == Ast_Type_Identifier);
 					}
 
 					break;case Dyad: {
 						// dummy nodes for '->' and 'dyad'
-						append_ast_node(&result, (Ast_Node){0});
-						append_ast_node(&result, (Ast_Node){0});
-						append_handle(&expr_state.dyad_operators, result.count-2);
+						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
+						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
+						vec_push(&expr_state.dyad_operators, result.nodes.count - 2, Node_Handle);
 					}
 
 					break;case Monad: {
 						// dummy node for 'monad'
-						append_ast_node(&result, (Ast_Node){0});
-						append_handle(&expr_state.monad_operators, result.count-1);
+						vec_push(&result.nodes, (Ast_Node){0}, Ast_Node);
+						vec_push(&expr_state.monad_operators, result.nodes.count - 1, Node_Handle);
 					}
 
 					break;default: {
@@ -318,25 +265,26 @@ Ast parse_expressions(Scanner *state) {
 	apply_functions(&expr_state, &result);
 
 	if (expr_state.active_nodes.count != 0) {
-		result.parent = expr_state.active_nodes.handles[0];
+		result.parent = vec_array(&expr_state.active_nodes, Node_Handle)[0];
 
 		if (binding_name >= 0) {
-			result.parent = append_ast_node(
-					&result, (Ast_Node){
-						.type = Ast_Type_Assignment,
-						.as_Assignment = {
-							.left = binding_name,
-							.right = expr_state.active_nodes.handles[0],
-						}
-					});
+			Ast_Node const node = {
+				.type = Ast_Type_Assignment,
+				.as_Assignment = {
+					.left = binding_name,
+					.right = vec_array(&expr_state.active_nodes, Node_Handle)[0],
+				},
+			};
+			result.parent = vec_push(&result.nodes, node, Ast_Node);
 		}
 	} else {
 		result.parent = -1;
 	}
 
-	free(expr_state.active_nodes.handles);
-	free(expr_state.parens.handles);
-	free(expr_state.dyad_operators.handles);
-	free(expr_state.monad_operators.handles);
+	vec_delete(&expr_state.active_nodes);
+	vec_delete(&expr_state.parens);
+	vec_delete(&expr_state.dyad_operators);
+	vec_delete(&expr_state.monad_operators);
+
 	return result;
 }

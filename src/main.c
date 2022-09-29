@@ -6,6 +6,7 @@
 #include "lib/scanner/module.h"
 #include "lib/format/module.h"
 #include "lib/string/module.h"
+#include "lib/vector/vector.h"
 
 #include "src/runtime/runtime.h"
 #include "src/parser/parser.h"
@@ -16,7 +17,7 @@
 #include "src/eval/ast.h"
 
 String read_line_into(char *buf, usize size) {
-	if (fgets(buf, size, stdin) == NULL) return (String){0};
+	if (fgets(buf, size, stdin) == NULL) { return (String){0}; }
 	buf[strlen(buf) - 1] = '\0';
 	return string_from_cstring(buf);
 }
@@ -26,7 +27,7 @@ i32 main () {
 	init_default_scope();
 
 	char line[1024];
-	Eval_Context ctx = {.scope = &default_scope};
+	Eval_Context ctx = { .scope = &default_scope };
 
 	for (;;) {
 		format_print("{col}[csr]>{col} ", Term_Col_FG_Green, Term_Col_Reset);
@@ -38,7 +39,7 @@ i32 main () {
 		Scanner scanner = { .source = src, .location.fname = "stdin" };
 
 		Ast ast = parse_expressions(&scanner);
-		apply(&ctx, ast.nodes, ast.parent);
+		apply(&ctx, vec_array(&ast.nodes, Ast_Node), ast.parent);
 		delete_ast(&ast);
 
 		IR_Node result = flat_eval(&ctx);

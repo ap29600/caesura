@@ -2,24 +2,20 @@
 
 #include "ast.h"
 
-void delete_ast(Ast *ast) {
-	for (u64 i = 0; i < ast->count; ++i) {
-		if (ast->nodes[i].type == Ast_Type_Array_Ptr) {
-			release_array(ast->nodes[i].as_Array_Ptr);
+void flush_ast(Ast *ast) {
+	for (u64 i = 0; i < ast->nodes.count; ++i) {
+		Ast_Node *const node = &vec_array(&ast->nodes, Ast_Node)[i];
+		if (node->type == Ast_Type_Array_Ptr) {
+			release_array(node->as_Array_Ptr);
 		}
-		ast->nodes[i] = (Ast_Node){0};
 	}
-	free(ast->nodes);
+	ast->nodes.count = 0;
+	ast->parent = 0;
+}
+
+void delete_ast(Ast *ast) {
+	flush_ast(ast);
+	vec_delete(&ast->nodes);
 	*ast = (Ast){0};
 }
 
-void flush_ast(Ast *ast) {
-	for (u64 i = 0; i < ast->count; ++i) {
-		if (ast->nodes[i].type == Ast_Type_Array_Ptr) {
-			release_array(ast->nodes[i].as_Array_Ptr);
-		}
-		ast->nodes[i] = (Ast_Node){0};
-	}
-	ast->count = 0;
-	ast->parent = 0;
-}
