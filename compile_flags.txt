@@ -1,7 +1,9 @@
 -xc
 -Werror
 -Wimplicit
+-Wpedantic
 -Wall
+-Wextra
 -Wno-unused-function
 -std=c2x
 -iquote.

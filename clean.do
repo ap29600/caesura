@@ -1,5 +1,4 @@
 #!/bin/sh
 
-rm main lib/obj/*.{o,a}
-
+rm -f main obj/*.{o,a}
 rm -r $(find . -type d -name '.redo')

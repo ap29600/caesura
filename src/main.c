@@ -7,14 +7,11 @@
 #include "lib/format/module.h"
 #include "lib/string/module.h"
 #include "lib/vector/vector.h"
+#include "lib/algorithm/module.h"
 
 #include "src/runtime/runtime.h"
 #include "src/parser/parser.h"
 #include "src/formats/formats.h"
-
-#include "src/eval/eval.h"
-#include "src/eval/ir.h"
-#include "src/eval/ast.h"
 
 String read_line_into(char *buf, usize size) {
 	if (fgets(buf, size, stdin) == NULL) { return (String){0}; }
@@ -50,4 +47,5 @@ i32 main () {
 	}
 
 	delete_eval_context(&ctx);
+	return EXIT_SUCCESS;
 }
