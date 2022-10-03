@@ -35,7 +35,7 @@ void apply(struct Eval_Context *ctx, const struct Ast_Node *base, Node_Handle ex
 // 	Value_Type_Function,
 // 	Value_Type_Closure,
 // } Value_Type;
-// 
+//
 // typedef struct {
 // 	Value_Type type;
 // 	union {
@@ -43,7 +43,7 @@ void apply(struct Eval_Context *ctx, const struct Ast_Node *base, Node_Handle ex
 // 		func_t function;
 // 	} as;
 // } Value;
-// 
+//
 // Error flat_eval_into(struct Eval_Context *ctx);
 
 #endif // EVAL_H

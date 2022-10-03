@@ -73,7 +73,7 @@ Element_Type monadic_typecheck(Lookup_Entry *entry, Element_Type right) {
 		break;case Type_None:
 			assert(false);
 			unreachable();
-		break;case Type_Generic_L: 
+		break;case Type_Generic_L:
 			assert(false);
 			unreachable();
 		break;case Type_Generic_R: return right;

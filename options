@@ -2,6 +2,15 @@
 
 CC='cc'
 STD='-std=c2x'
-OPT='-O0'
+OPT='-Og'
 DEBUG='-ggdb -fsanitize=address'
-WARN='-Wimplicit -Werror -Wextra -Wall -Wpedantic -Wno-unused-function -Wno-stringop-overread -Wno-unused-value'
+WARN='
+    -Wimplicit
+    -Werror
+    -Wextra
+    -Wall
+    -Wpedantic
+    -Wno-unused-function
+    -Wno-stringop-overread
+    -Wno-unused-value
+'

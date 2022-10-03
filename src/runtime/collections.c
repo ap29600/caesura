@@ -51,7 +51,7 @@ IR_Node func_reshape (IR_Node *left, IR_Node *right) {
 		memcpy(((u8*)result->data) + count * size, right_->data, to_copy * size);
 		count += to_copy;
 	}
-	
+
 	release_array(right_);
 	release_array(left_);
 	return (IR_Node){ .type = IR_Type_Array, .as.array = result};

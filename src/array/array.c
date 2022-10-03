@@ -71,7 +71,7 @@ Array* array_append_elem(const void *elem, Array *array, Element_Type type) {
 	assert(array);
 	assert(array->ref_count == 1 && "permission to modify");
 	assert((u8*)array->data == ((u8*)array + sizeof(Array)) && "single allocation");
-	
+
 	u8 buffer[sizeof(i64)] = {0};
 	Element_Type supertype = ranges[array->type] >= ranges[type] ? array->type : type;
 	array = array_cast(array, supertype);
