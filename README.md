@@ -2,81 +2,129 @@
 
 An array programming language with a focus on tacit programming and expressivity
 
-## Basic syntax and semantics
+## Grammar
 
-a caesura program is composed of tokens.
-a token may be:
-- a literal scalar value (`floating`, `integer`, `boolean`, `character`)
-- an identifier: a string matching `[^.,'():space:]+`.
-- a special operator: one of `.`, `:`, `,`, `!`, `(`, `)`, `::`.
+```
+Definition = Identifier '::' Expression
+           | Identifier Identifier '::' Expression
+           | Identifier Identifier Identifier '::' Expression
 
-### Expression
+Expression = Monadic
+           | Dyadic
+           | Value
 
-a literal value, identifier or function application
+Value      = Atom
+           | MonadComp
+           | DyadComp
 
-### Function application
+MonadComp  = ( Atom | DyadComp ) '.' ( Atom | DyadComp | MonadComp )
 
-in Caesura, functions may be monadic or dyadic, meaning they take either one or two arguments.
-Scalars and arrays can be seen as special cases of nonadic functions (zero-argument functions).
+DyadComp   = ( Atom | DyadComp ) ':' Atom
 
-Caesura uses infix notation, and function application is done by adjoining the function and the value(s).
-- a monadic function has its only argument on the right: `f x` (equivalent to lisp's `(f x)`)
-- a dyadic function has a left argument and a right argument: `y f x` (equivalent to lisp's `(f x y)`)
+Atom       = Identifier
+           | Literal
+           | Immediate
+           | '(' Expression ')'
 
-Note that it does not matter whether `a` or `b` are functions or data: the result of `a f b` is equivalent to: 
-`(lambda (x y) (f (a x y) (b x y)))` which is usually called a train in array languages.
-If `a` or `b` only take one argument (or take none) then the left argument is discarded first, then the right.
+Immediate  = '!' Atom
 
-#### Forcing monadic or dyadic application
+Literal    = Number ( ',' Number )*
 
-While writing complex expressions, monadic or dyadic application can be enforced by the following operators: `:`, `.`
+Monadic    = Value ( Value | Dyadic )
 
-- the operator `:` (`dyadic`) enforces dyadic application of its right argument on its left argument and an additional argument on the right.
-    The expression `y:f x` is similar to lisp's `(f x y)`.
-    The right argument of `f` can be omitted and `(y:f)` is equivalent to `(y f ->)`; if `y` takes no arguments this is equivalent to partial application.
+Dyadic     = Value Value ( Value | Dyadic )
 
-Example: given that the dyadic meaning of `*` is multiplication, the dyadic meaning of `+` is sum, and the `:` operator is left-associative, `(1:+:*) x` expands to `((1 + x) * x)`.
+Number     = /[-+]?[0-9]+(.[0-9]+)?(e[-+]?[0-9]+)?/
 
-- the operator `.` (`monadic`) enforces monadic application of its left argument to its right argument.
-    The expression `f.x` denotes monadic application of the function `f` to the parameter `x`.
-    The right argument can be omitted and `(f.)` is equivalent to `(f ->)`.
+Identifier = /[^.:,()!]+/
+```
 
-Example: given that the monadic meaning of `*` is squaring and the monadic meaning of `-` is negation, `(-.*.) 2` evaluates to `-4`.
+Note: the `DyadComp` rule is left-recursive. This might be an issue while
+generating parsers for the grammar.
 
-#### Function objects
+For example the string `- 1 (foo : bar . baz) 3, 4, 5` would parse to:
 
-given a higher order function `f` expecting a function as the right argument, in order to provide said argument the programmer must inhibit the
-composition semantics of `f g`.
+```
+Expression
+    Monadic
+        Value Identifier '-'
+        Dyadic
+            Value Atom Literal 1
+            Value
+                '('
+                MonadComp
+                    DyadComp
+                        Atom Identifier 'foo'
+                        ':'
+                        Atom Identifier 'bar'
+                    '.'
+                    Atom Identifier 'baz'
+                ')'
+            Value Atom Literal '3, 4, 5'
+```
 
-In order to do this, the operator `!` (`immediate`) transforms an expression into the corresponding function object, preventing composition
-(that is, `!` returns the nonadic function whose value is equal to its argument).
-`f!g` is then equal to substituting the formal right argument with `g` in the body of `f`.
-This also works with a dyadic application: `!f g !h` applies `g` to the function objects `!f` and `!h`.
-If `g` is not a function, it remains unchanged.
 
-Example: given `flip f :: (<- f ->)` the expression `1 (flip !-) 0` evaluates to `-1`
+## Semantic Meaning of language constructs
 
-### Building arrays
+- `Literal`s and `Identifier`s are scalar values, arrays or variable names.
+variables may evaluate to scalar values, arrays, or functions.
 
-The `,` (`enlist`) operator can be used in order to construct a one-dimensional array from multiple values. The operators `,,`, `,,,`, ... are reserved for building
-higher dimensional arrays, but the exact behaviour is not yet defined.
+- `Monadic` expressions indicate function composition, where any non-function
+object is treated as a function of no arguments;
 
-Example: `1,2,3 + 4,5,6` evaluates to `5,7,9`
+For example if `baz` $: (A \times B) \to C$ and `foo` $: C \to D$ then
+`(foo bar)` $: (A \times B) \to C$.
 
-### Definition
+Any scalar of type $T$ is equivalent for the purpose of composition to a
+function of type $\\{\emptyset\\} \to T$.
 
-a sequence of 1, 2 or 3 identifiers at the start of a line, followed by the operator `::` (`define`), followed by an expression that spans the rest of the line.
-the following cases are possible:
-- `a :: (...)`: `(...)` is evaluated and the result is bound to the identifier `a`
-- `f g :: (...) ` where `(...)` is an expression (possibly making use of `g`): binds to `f` the monadic function whose value is `(...)` when applied to the formal parameter `g`.
-- `h f g :: (...) ` where `(...)` is an expression (possibly making use of `g` and `h`): binds to `f` the dyadic function whose value is `(...)` when applied to the formal parameters `g` and `h`.
+- `Dyadic` expressions indicate composition of a two-argument function, with
+the same rules as before for composition with scalars.
+
+For example if
+`foo` $: \Omega \le (A \times B) \to C$,
+`bar` $: \Theta \le (A \times B) \to D$,
+`baz` $:(C \times D) \to E$ then `(foo baz bar)` $: (A \times B) \to D$
+provided that $\le$ is the relation of being a quotient of the product set,
+and that $(A \times B)$ is chosen minimally.
+
+a concrete example would be:
+`foo` $: (\mathbb N \times \mathbb Q) \to \mathbb R$
+`bar` $: (\\{\emptyset\\} \times \mathbb Q) \to \mathbb R$
+`baz` $: (\mathbb R \times \mathbb R) \to \mathbb C$
+`(foo baz bar)` $: (\mathbb N \times \mathbb Q) \to \mathbb C$
+
+where we can see that `foo` takes an argument in the whole set
+$(\mathbb N \times \mathbb Q)$, while `bar` only takes the component in
+$\mathbb Q$, and the minimal product space containing the domains of both 
+`foo` and `bar` is $(\mathbb N \times \mathbb Q)$.
+
+- `MonadComp` is syntactic sugar for `Monadic`:
+`foo . bar` is equivalent to `(foo bar)` and its associativity can be used to
+avoid using lots of parentheses: `foo . bar . baz . fee 10` is equivalent to
+`foo (bar (baz (fee 10)))`
+
+- `DyadComp` is syntactic sugar for `Dyadic`:
+`foo : bar` is equivalent to `(foo bar ->)` where `->` is the identity
+function.
+
+- `Immediate` turns the contained `Atom` into a non-function value.
+This is useful for higher order functions: For example `(foo !bar) baz`
+indicates applying to `baz` the function returned from `foo` applied to `bar`.
+
+- `Definition`s bind the `Expression` on the right to the `Identifier`s on the
+left, pattern-matching them as a `Monadic` or `Dyadic` expression.
+
+For example if there are three identifiers, the middle one is used as a bind name,
+while the left and right are the formal left and right arguments and are available
+in the definition body.
 
 ## Operator precedence
 
 | operator |    name     | precedence | associativity |
 |----------|-------------|------------|---------------|
 |   `::`   |  `define`   |     0      |      ---      |
-|   ` `    |   `apply`   |     1      |     left      |
+|   ` `    |   `apply`   |     1      |     right     |
 |   `.`    |  `monadic`  |     2      |     left      |
 |   `:`    |  `dyadic`   |     3      |     left      |
 |   `,`    |  `enlist`   |     4      |     left      |
