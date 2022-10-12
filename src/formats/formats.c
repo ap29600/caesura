@@ -99,19 +99,19 @@ i64 fmt_eval_context_as_dot(Byte_Slice dest, Eval_Context *src, Fmt_Info info) {
 	dest.begin += fmt_cstr(dest, "digraph {\n", info);
 
 	for(u64 i = 0; i < src->count; ++i) {
-		dest.begin += string_len(format_to(dest, "\tnode_{u64} [label=\"{node}\"]\n", i, src->nodes[i]));
+		dest.begin += string_len(fmt_to(dest, "\tnode_{u64} [label=\"{node}\"]\n", i, src->nodes[i]));
 	}
 
 	for(u64 i = 0; i < src->count; ++i) {
 		switch(src->nodes[i].type) {
 			break;case IR_Type_Monad:
-				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
-				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
+				dest.begin += string_len(fmt_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
+				dest.begin += string_len(fmt_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
 
 			break;case IR_Type_Dyad:
-				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=left]\n", i, src->nodes[i].as.args.left));
-				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
-				dest.begin += string_len(format_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
+				dest.begin += string_len(fmt_to(dest, "\tnode_{u64} -> node_{u64} [label=left]\n", i, src->nodes[i].as.args.left));
+				dest.begin += string_len(fmt_to(dest, "\tnode_{u64} -> node_{u64} [label=func]\n", i, src->nodes[i].as.args.callee));
+				dest.begin += string_len(fmt_to(dest, "\tnode_{u64} -> node_{u64} [label=right]\n", i, src->nodes[i].as.args.right));
 
 			break;default:;
 		}

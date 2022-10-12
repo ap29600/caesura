@@ -29,7 +29,7 @@ i32 main () {
 
 	for (;;) {
 		// only print the prompt if running in interactive mode
-		if (isatty(0)) { format_print("{col}[csr]>{col} ", Term_Col_FG_Green, Term_Col_Reset); }
+		if (isatty(0)) { fmt_print("{col}[csr]>{col} ", Term_Col_FG_Green, Term_Col_Reset); }
 
 		char line[1024];
 		String src = read_line_into(line, sizeof(line));
@@ -43,7 +43,7 @@ i32 main () {
 		delete_ast(&ast);
 
 		IR_Node result = flat_eval(&ctx);
-		format_println("\t{node}", result);
+		fmt_println("\t{node}", result);
 		release_node(&result);
 
 		flush_eval_context(&ctx);
